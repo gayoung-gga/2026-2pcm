@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>학생 타속 기록 시스템</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Hide scrollbar for tabs */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Subtle pulse for live sync indicator */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.95); }
+        }
+        .live-dot {
+            animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased bg-slate-50">
+
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-200">
+                    <i class="fa-solid fa-keyboard text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                        학생 타속 기록 시스템
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">클라우드 동기화</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">실시간 데이터 저장 및 진전도 측정 서비스</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <!-- Sync Status Badge -->
+                <div id="auth-status" class="text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full flex items-center gap-2 border border-slate-200">
+                    <span id="auth-indicator" class="w-2.5 h-2.5 rounded-full bg-amber-400 live-dot"></span>
+                    <span id="auth-text" class="font-medium">서버 연결 중...</span>
+                </div>
+
+                <!-- Share Link Button -->
+                <button onclick="copyShareLink()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 px-3 py-1.5 rounded-lg shadow-2xs transition-all active:scale-95">
+                    <i class="fa-solid fa-share-nodes text-slate-500"></i>
+                    <span>링크 공유</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- Student Tabs Navigation & Management Bar -->
+        <section class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-users text-slate-400 text-sm"></i>
+                    <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">학생목록 (탭 클릭 선택)</h2>
+                </div>
+                <button onclick="openModal('addStudentModal')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 px-3 py-1.5 rounded-lg transition-colors shadow-xs">
+                    <i class="fa-solid fa-user-plus"></i>
+                    학생 추가
+                </button>
+            </div>
+
+            <!-- Scrollable Student Tabs List -->
+            <div id="student-tabs-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 min-h-[46px]">
+                <div class="text-sm text-slate-400 italic py-1 px-2">학생 목록을 불러오는 중...</div>
+            </div>
+        </section>
+
+        <!-- Dynamic Student Workspace -->
+        <div id="workspace" class="hidden flex-grow flex flex-col gap-6">
+
+            <!-- Student Info & View Switcher Bar -->
+            <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-center justify-between sm:justify-start gap-4">
+                    <div class="flex items-center gap-3">
+                        <div id="active-student-avatar" class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-xl flex items-center justify-center shadow-md shadow-emerald-100">
+                            -
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h2 id="active-student-name" class="text-2xl font-bold text-slate-900">학생 이름</h2>
+                                <button onclick="openEditStudentModal()" title="학생 이름 수정" class="text-slate-400 hover:text-slate-600 p-1 text-xs">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button onclick="confirmDeleteStudent()" title="학생 프로필 삭제" class="text-slate-400 hover:text-rose-600 p-1 text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">실시한 타속 측정 기록 및 최고 기록 진전도 분석 데이터</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View Switch Tabs -->
+                <div class="flex bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 self-start sm:self-auto">
+                    <button onclick="switchWorkspaceView('input')" id="tab-btn-input" class="px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-to-square text-emerald-600"></i>
+                        타속 입력 및 기록
+                    </button>
+                    <button onclick="switchWorkspaceView('chart')" id="tab-btn-chart" class="px-4 py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                        최종 확인 (진전도 그래프)
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW 1: Input & Entry Section -->
+            <div id="view-input" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Attempt Entry Form (Left Side) -->
+                <div class="lg:col-span-5 bg-white rounded-2xl shadow-xs border border-slate-200/80 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-stopwatch text-emerald-600"></i>
+                                새 타속 측정 입력
+                            </h3>
+                            <span class="text-2xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded">자동 최고 타속 갱신</span>
+                        </div>
+
+                        <form id="record-form" class="space-y-4">
+                            <!-- Date & Period Grid -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">측정 날짜</label>
+                                    <input type="date" id="input-date" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">교시</label>
+                                    <select id="input-period" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all">
+                                        <option value="1">1교시</option>
+                                        <option value="2">2교시</option>
+                                        <option value="3">3교시</option>
+                                        <option value="4">4교시</option>
+                                        <option value="5">5교시</option>
+                                        <option value="6">6교시</option>
+                                        <option value="7">7교시</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 3 Typing Speed Inputs -->
+                            <div class="space-y-3 pt-2">
+                                <div class="p-3 bg-sky-50/50 rounded-xl border border-sky-100">
+                                    <label class="block text-xs font-bold text-sky-900 mb-1 flex justify-between">
+                                        <span><i class="fa-solid fa-keyboard text-sky-500 mr-1"></i> 자리 타속 (타/분)</span>
+                                        <span class="text-2xs font-normal text-sky-600">기본 키자리 익히기</span>
+                                    </label>
+                                    <input type="number" id="input-keys" min="0" max="2500" required placeholder="예: 250" class="w-full rounded-lg border border-sky-200 px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-sky-500 outline-none bg-white">
+                                </div>
+
+                                <div class="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                                    <label class="block text-xs font-bold text-emerald-900 mb-1 flex justify-between">
+                                        <span><i class="fa-solid fa-font text-emerald-500 mr-1"></i> 단어 타속 (타/분)</span>
+                                        <span class="text-2xs font-normal text-emerald-600">낱말 입력 연습</span>
+                                    </label>
+                                    <input type="number" id="input-words" min="0" max="2500" required placeholder="예: 320" class="w-full rounded-lg border border-emerald-200 px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                </div>
+
+                                <div class="p-3 bg-purple-50/50 rounded-xl border border-purple-100">
+                                    <label class="block text-xs font-bold text-purple-900 mb-1 flex justify-between">
+                                        <span><i class="fa-solid fa-align-left text-purple-500 mr-1"></i> 문장 타속 (타/분)</span>
+                                        <span class="text-2xs font-normal text-purple-600">긴 문장/글 연습</span>
+                                    </label>
+                                    <input type="number" id="input-sentences" min="0" max="2500" required placeholder="예: 280" class="w-full rounded-lg border border-purple-200 px-3 py-2 text-slate-900 font-semibold focus:ring-2 focus:ring-purple-500 outline-none bg-white">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all shadow-sm active:scale-[0.99] flex items-center justify-center gap-2 text-sm mt-3">
+                                <i class="fa-solid fa-plus-circle text-emerald-400"></i>
+                                기록 추가 및 최고 타속 갱신
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-amber-800 text-xs leading-relaxed flex items-start gap-2">
+                        <i class="fa-solid fa-lightbulb text-amber-500 text-sm mt-0.5"></i>
+                        <div>
+                            <span class="font-bold">여러 번 시도 가능:</span> 동일한 날짜 및 교시에 여러 번 측정해도 기존 기록 중 <span class="underline font-bold">카테고리별 최고 타속</span>이 최종 저장 및 그래프 분석에 자동 등록됩니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session History Table (Right Side) -->
+                <div class="lg:col-span-7 bg-white rounded-2xl shadow-xs border border-slate-200/80 p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-slate-500"></i>
+                                날짜/교시별 최고 타속 기록
+                            </h3>
+                            <span id="record-count-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">0개 세션</span>
+                        </div>
+
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-2xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50/50">
+                                        <th class="py-2.5 px-3">날짜/교시</th>
+                                        <th class="py-2.5 px-2 text-center text-sky-700">최고 자리</th>
+                                        <th class="py-2.5 px-2 text-center text-emerald-700">최고 단어</th>
+                                        <th class="py-2.5 px-2 text-center text-purple-700">최고 문장</th>
+                                        <th class="py-2.5 px-2 text-center">시도 횟수</th>
+                                        <th class="py-2.5 px-3 text-right">관리</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="records-table-body" class="text-sm divide-y divide-slate-100">
+                                    <!-- Table content will be dynamically generated -->
+                                </tbody>
+                            </table>
+                            
+                            <div id="no-records-msg" class="text-center py-12 text-slate-400">
+                                <i class="fa-solid fa-clipboard-list text-3xl mb-2 text-slate-300"></i>
+                                <p class="text-sm">아직 등록된 타속 측정 기록이 없습니다.</p>
+                                <p class="text-xs text-slate-400 mt-1">좌측 서식에서 타수 데이터를 작성해 첫 기록을 남겨보세요.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-between">
+                        <span><i class="fa-solid fa-circle-info text-slate-400 mr-1"></i> 시도 횟수를 클릭하여 각 시도별 타속 내역을 확인할 수 있습니다.</span>
+                        <button onclick="switchWorkspaceView('chart')" class="text-indigo-600 font-bold hover:underline flex items-center gap-1">
+                            그래프 보기 <i class="fa-solid fa-arrow-right text-2xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: Final Confirmation & Progress Analytics Section -->
+            <div id="view-chart" class="hidden flex-col gap-6">
+                
+                <!-- Summary Stat Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Key Max -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">최고 자리 타속</p>
+                            <h4 id="stat-max-key" class="text-2xl font-black text-sky-600">0 <span class="text-xs font-normal text-slate-500">타/분</span></h4>
+                            <p id="stat-key-date" class="text-2xs text-slate-400 mt-1">기록 없음</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-keyboard"></i>
+                        </div>
+                    </div>
+
+                    <!-- Word Max -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">최고 단어 타속</p>
+                            <h4 id="stat-max-word" class="text-2xl font-black text-emerald-600">0 <span class="text-xs font-normal text-slate-500">타/분</span></h4>
+                            <p id="stat-word-date" class="text-2xs text-slate-400 mt-1">기록 없음</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-font"></i>
+                        </div>
+                    </div>
+
+                    <!-- Sentence Max -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">최고 문장 타속</p>
+                            <h4 id="stat-max-sentence" class="text-2xl font-black text-purple-600">0 <span class="text-xs font-normal text-slate-500">타/분</span></h4>
+                            <p id="stat-sentence-date" class="text-2xs text-slate-400 mt-1">기록 없음</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-align-left"></i>
+                        </div>
+                    </div>
+
+                    <!-- Overall Growth -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">최근 진전도 (성장률)</p>
+                            <h4 id="stat-growth-rate" class="text-2xl font-black text-slate-900">-</h4>
+                            <p id="stat-growth-sub" class="text-2xs text-slate-400 mt-1">이전 세션 대비</p>
+                        </div>
+                        <div id="stat-growth-icon" class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Progress Interactive Chart Card -->
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                                <i class="fa-solid fa-chart-area text-indigo-600"></i>
+                                타속 진전도 변화 그래프 (최종 확인)
+                            </h3>
+                            <p class="text-xs text-slate-500">측정한 날짜 및 교시에 따른 최고 타속 추이 비교 분석</p>
+                        </div>
+
+                        <!-- Chart Series Controls -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="filterChartSeries('all')" id="chart-filter-all" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-900 text-white shadow-2xs">전체 보기</button>
+                            <button onclick="filterChartSeries('keys')" id="chart-filter-keys" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">자리</button>
+                            <button onclick="filterChartSeries('words')" id="chart-filter-words" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">단어</button>
+                            <button onclick="filterChartSeries('sentences')" id="chart-filter-sentences" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">문장</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="relative h-80 sm:h-96 w-full">
+                        <canvas id="progressChart"></canvas>
+                        <div id="chart-empty-placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 hidden">
+                            <i class="fa-solid fa-chart-simple text-4xl text-slate-300 mb-2"></i>
+                            <p class="text-sm font-bold text-slate-600">그래프를 표시할 데이터가 부족합니다</p>
+                            <p class="text-xs text-slate-400 mt-1">타속 기록을 최소 1개 이상 추가해주세요.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Session Progress Log Table -->
+                <div class="bg-white rounded-2xl shadow-xs border border-slate-200/80 p-6">
+                    <h3 class="font-bold text-slate-900 text-base mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+                        세션별 타속 진전 상세 내역
+                    </h3>
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-2xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 bg-slate-50">
+                                    <th class="py-3 px-4">날짜 & 교시</th>
+                                    <th class="py-3 px-3 text-center">자리 타속</th>
+                                    <th class="py-3 px-3 text-center">단어 타속</th>
+                                    <th class="py-3 px-3 text-center">문장 타속</th>
+                                    <th class="py-3 px-4 text-center">전 세션 대비 종합 진전</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-table-body" class="text-sm divide-y divide-slate-100">
+                                <!-- Dynamic breakdown rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Empty State (When no student exists or none selected) -->
+        <div id="empty-state" class="flex-grow flex items-center justify-center bg-white rounded-2xl border border-slate-200 border-dashed p-12 text-center shadow-2xs">
+            <div class="max-w-md mx-auto">
+                <div class="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 text-2xl shadow-sm">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">선택되거나 등록된 학생이 없습니다</h3>
+                <p class="text-sm text-slate-500 mt-1 mb-6 leading-relaxed">
+                    상단 탭에서 학생을 선택하거나, 새로 등록하여 실시간 타속 측정 기록과 그래프 분석을 시작하세요.
+                </p>
+                <button onclick="openModal('addStudentModal')" class="inline-flex items-center gap-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">
+                    <i class="fa-solid fa-plus"></i>
+                    새 학생 추가하기
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Add Student Modal -->
+    <div id="addStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center z-50 transition-opacity p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden transform scale-95 transition-all border border-slate-100" id="addStudentModalContent">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-emerald-600"></i>
+                    새 학생 추가
+                </h3>
+                <button onclick="closeModal('addStudentModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="add-student-form" class="p-6">
+                <label class="block text-xs font-bold text-slate-700 mb-2">학생 이름</label>
+                <input type="text" id="new-student-name" required placeholder="예: 김민수" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm transition-all mb-6">
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('addStudentModal')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">취소</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-xs">추가 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Student Modal -->
+    <div id="editStudentModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center z-50 transition-opacity p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-pen text-slate-600"></i>
+                    학생 이름 수정
+                </h3>
+                <button onclick="closeModal('editStudentModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="edit-student-form" class="p-6">
+                <label class="block text-xs font-bold text-slate-700 mb-2">수정할 이름</label>
+                <input type="text" id="edit-student-name-input" required class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition-all mb-6">
+                
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('editStudentModal')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">취소</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition-colors shadow-xs">수정 저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Dialog Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center z-50 transition-opacity p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center border border-slate-100">
+            <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="confirm-modal-title" class="font-bold text-slate-900 text-base">삭제 확인</h3>
+            <p id="confirm-modal-desc" class="text-xs text-slate-500 mt-1 mb-6">정말로 실행하시겠습니까?</p>
+            <div class="flex justify-center gap-3">
+                <button type="button" onclick="closeModal('confirmModal')" class="w-full py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">취소</button>
+                <button type="button" id="confirm-action-btn" class="w-full py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-colors shadow-xs">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attempt Detail Modal -->
+    <div id="attemptDetailModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center z-50 transition-opacity p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 id="attempt-modal-title" class="font-bold text-slate-900 text-sm">측정 시도 이력 히스토리</h3>
+                    <p id="attempt-modal-sub" class="text-2xs text-slate-500">해당 세션의 전체 시도 목록</p>
+                </div>
+                <button onclick="closeModal('attemptDetailModal')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 max-h-96 overflow-y-auto custom-scrollbar">
+                <table class="w-full text-xs text-left">
+                    <thead>
+                        <tr class="text-slate-400 font-bold border-b border-slate-100">
+                            <th class="pb-2">시도 시각</th>
+                            <th class="pb-2 text-center text-sky-700">자리 타속</th>
+                            <th class="pb-2 text-center text-emerald-700">단어 타속</th>
+                            <th class="pb-2 text-center text-purple-700">문장 타속</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attempt-list-body" class="divide-y divide-slate-100">
+                        <!-- Dynamic attempt details -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-lg transform translate-y-24 opacity-0 transition-all duration-300 z-50 flex items-center gap-3 border border-slate-700">
+        <div id="toast-icon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <span id="toast-message" class="text-xs font-semibold">알림 메시지</span>
+    </div>
+
+    <!-- Script Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global State & Firebase Refs
+        let app, db, auth;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-tracker-global-app';
+        let currentUser = null;
+
+        let studentsList = [];
+        let recordsList = [];
+        let activeStudentId = null;
+        let activeView = 'input'; // 'input' | 'chart'
+        let chartInstance = null;
+        let chartFilter = 'all'; // 'all' | 'keys' | 'words' | 'sentences'
+        let pendingConfirmAction = null;
+
+        // Initialize Firebase safely
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+                apiKey: "mock-key",
+                authDomain: "mock-project.firebaseapp.com",
+                projectId: "mock-project"
+            };
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            initAuth();
+        } catch (error) {
+            console.error("Firebase Initialization Error:", error);
+            updateStatusIndicator('error', '데이터베이스 연결 실패');
+        }
+
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                currentUser = auth.currentUser;
+                updateStatusIndicator('connected', '실시간 동기화 완료');
+                
+                // Set default date to today's date in YYYY-MM-DD format
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('input-date').value = today;
+
+                // Subscribe to realtime database changes
+                setupRealtimeListeners();
+            } catch (error) {
+                console.error("Auth Error:", error);
+                updateStatusIndicator('error', '인증 실패');
+            }
+        }
+
+        function updateStatusIndicator(status, text) {
+            const indicator = document.getElementById('auth-indicator');
+            const statusText = document.getElementById('auth-text');
+            statusText.innerText = text;
+
+            if (status === 'connected') {
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 live-dot';
+            } else if (status === 'error') {
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-rose-500';
+            } else {
+                indicator.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 live-dot';
+            }
+        }
+
+        function setupRealtimeListeners() {
+            if (!currentUser) return;
+
+            // Strict collection paths per system mandate
+            const studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+            const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+
+            // 1. Listen for Students
+            onSnapshot(studentsRef, (snapshot) => {
+                studentsList = [];
+                snapshot.forEach((docSnap) => {
+                    studentsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                
+                // Sort students alphabetically
+                studentsList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+                
+                // If active student was deleted or not selected, pick first available
+                if (studentsList.length > 0) {
+                    if (!activeStudentId || !studentsList.some(s => s.id === activeStudentId)) {
+                        activeStudentId = studentsList[0].id;
+                    }
+                } else {
+                    activeStudentId = null;
+                }
+
+                renderStudentTabs();
+                renderWorkspace();
+            }, (error) => {
+                console.error("Students Listener Error:", error);
+                showToast("학생 목록 동기화 오류", "error");
+            });
+
+            // 2. Listen for Typing Speed Records
+            onSnapshot(recordsRef, (snapshot) => {
+                recordsList = [];
+                snapshot.forEach((docSnap) => {
+                    recordsList.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                
+                if (activeStudentId) {
+                    updateActiveStudentView();
+                }
+            }, (error) => {
+                console.error("Records Listener Error:", error);
+                showToast("기록 데이터 동기화 오류", "error");
+            });
+        }
+
+        window.renderStudentTabs = function() {
+            const container = document.getElementById('student-tabs-container');
+            container.innerHTML = '';
+
+            if (studentsList.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 italic py-1 px-2">등록된 학생이 없습니다. '학생 추가' 버튼을 눌러주세요.</div>`;
+                return;
+            }
+
+            studentsList.forEach(student => {
+                const isActive = student.id === activeStudentId;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition-all flex items-center gap-2 ${
+                    isActive 
+                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200' 
+                    : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200/60'
+                }`;
+
+                // Calculate total record sessions count for student badge
+                const count = recordsList.filter(r => r.studentId === student.id).length;
+
+                btn.innerHTML = `
+                    <i class="fa-solid fa-user-graduate ${isActive ? 'text-white' : 'text-slate-400'}"></i>
+                    <span>${escapeHTML(student.name)}</span>
+                    <span class="px-1.5 py-0.5 rounded-full text-3xs font-black ${isActive ? 'bg-emerald-800/40 text-emerald-100' : 'bg-slate-200 text-slate-600'}">${count}</span>
+                `;
+                btn.onclick = () => selectStudent(student.id);
+                container.appendChild(btn);
+            });
+        };
+
+        window.selectStudent = function(id) {
+            activeStudentId = id;
+            renderStudentTabs();
+            renderWorkspace();
+        };
+
+        function renderWorkspace() {
+            const emptyState = document.getElementById('empty-state');
+            const workspace = document.getElementById('workspace');
+
+            if (!activeStudentId || studentsList.length === 0) {
+                emptyState.classList.remove('hidden');
+                workspace.classList.add('hidden');
+                return;
+            }
+
+            const student = studentsList.find(s => s.id === activeStudentId);
+            if (!student) return;
+
+            emptyState.classList.add('hidden');
+            workspace.classList.remove('hidden');
+
+            document.getElementById('active-student-name').innerText = student.name;
+            document.getElementById('active-student-avatar').innerText = student.name.charAt(0).toUpperCase();
+
+            updateActiveStudentView();
+        }
+
+        function updateActiveStudentView() {
+            if (!activeStudentId) return;
+
+            // Get records for selected student
+            const studentRecords = recordsList.filter(r => r.studentId === activeStudentId);
+
+            // Sort by Date (descending) then Period (descending) for tables
+            studentRecords.sort((a, b) => {
+                const dateCmp = (b.date || '').localeCompare(a.date || '');
+                if (dateCmp !== 0) return dateCmp;
+                return (b.period || 0) - (a.period || 0);
+            });
+
+            renderRecordsTable(studentRecords);
+            renderChartAndAnalytics(studentRecords);
+        }
+
+        function renderRecordsTable(records) {
+            const tbody = document.getElementById('records-table-body');
+            const noMsg = document.getElementById('no-records-msg');
+            const countBadge = document.getElementById('record-count-badge');
+
+            tbody.innerHTML = '';
+            countBadge.innerText = `${records.length}개 세션`;
+
+            if (records.length === 0) {
+                noMsg.classList.remove('hidden');
+                return;
+            }
+
+            noMsg.classList.add('hidden');
+
+            records.forEach(rec => {
+                const attemptsCount = rec.attempts ? rec.attempts.length : 1;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition-colors group";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-semibold text-slate-900">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>${rec.date}</span>
+                            <span class="text-2xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${rec.period}교시</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-2 text-center font-bold text-sky-600">${rec.maxKeys || 0}</td>
+                    <td class="py-3 px-2 text-center font-bold text-emerald-600">${rec.maxWords || 0}</td>
+                    <td class="py-3 px-2 text-center font-bold text-purple-600">${rec.maxSentences || 0}</td>
+                    <td class="py-3 px-2 text-center">
+                        <button onclick="viewAttemptDetails('${rec.id}')" class="px-2 py-1 text-2xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors inline-flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left text-3xs"></i> ${attemptsCount}회 시도
+                        </button>
+                    </td>
+                    <td class="py-3 px-3 text-right">
+                        <button onclick="confirmDeleteRecord('${rec.id}')" class="text-slate-400 hover:text-rose-600 p-1 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderChartAndAnalytics(records) {
+            // Need chronological order (oldest to newest) for chart
+            const chronologicalRecords = [...records].sort((a, b) => {
+                const dateCmp = (a.date || '').localeCompare(b.date || '');
+                if (dateCmp !== 0) return dateCmp;
+                return (a.period || 0) - (b.period || 0);
+            });
+
+            // Calculate overall max stats
+            let maxKey = 0, maxKeyDate = '-';
+            let maxWord = 0, maxWordDate = '-';
+            let maxSent = 0, maxSentDate = '-';
+
+            chronologicalRecords.forEach(r => {
+                if ((r.maxKeys || 0) > maxKey) {
+                    maxKey = r.maxKeys;
+                    maxKeyDate = `${r.date} (${r.period}교시)`;
+                }
+                if ((r.maxWords || 0) > maxWord) {
+                    maxWord = r.maxWords;
+                    maxWordDate = `${r.date} (${r.period}교시)`;
+                }
+                if ((r.maxSentences || 0) > maxSent) {
+                    maxSent = r.maxSentences;
+                    maxSentDate = `${r.date} (${r.period}교시)`;
+                }
+            });
+
+            document.getElementById('stat-max-key').innerHTML = `${maxKey} <span class="text-xs font-normal text-slate-500">타/분</span>`;
+            document.getElementById('stat-key-date').innerText = maxKeyDate !== '-' ? `달성: ${maxKeyDate}` : '기록 없음';
+
+            document.getElementById('stat-max-word').innerHTML = `${maxWord} <span class="text-xs font-normal text-slate-500">타/분</span>`;
+            document.getElementById('stat-word-date').innerText = maxWordDate !== '-' ? `달성: ${maxWordDate}` : '기록 없음';
+
+            document.getElementById('stat-max-sentence').innerHTML = `${maxSent} <span class="text-xs font-normal text-slate-500">타/분</span>`;
+            document.getElementById('stat-sentence-date').innerText = maxSentDate !== '-' ? `달성: ${maxSentDate}` : '기록 없음';
+
+            // Calculate growth rate comparing latest 2 sessions
+            const growthEl = document.getElementById('stat-growth-rate');
+            const growthSub = document.getElementById('stat-growth-sub');
+            const growthIcon = document.getElementById('stat-growth-icon');
+
+            if (chronologicalRecords.length >= 2) {
+                const latest = chronologicalRecords[chronologicalRecords.length - 1];
+                const prev = chronologicalRecords[chronologicalRecords.length - 2];
+
+                const latestAvg = Math.round(((latest.maxKeys || 0) + (latest.maxWords || 0) + (latest.maxSentences || 0)) / 3);
+                const prevAvg = Math.round(((prev.maxKeys || 0) + (prev.maxWords || 0) + (prev.maxSentences || 0)) / 3);
+                const diff = latestAvg - prevAvg;
+
+                if (diff > 0) {
+                    growthEl.innerHTML = `<span class="text-emerald-600">+${diff} <span class="text-xs">타 ▲</span></span>`;
+                    growthSub.innerText = `이전 세션(${prev.date}) 대비 상승`;
+                    growthIcon.className = "w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl";
+                } else if (diff < 0) {
+                    growthEl.innerHTML = `<span class="text-rose-600">${diff} <span class="text-xs">타 ▼</span></span>`;
+                    growthSub.innerText = `이전 세션(${prev.date}) 대비 감소`;
+                    growthIcon.className = "w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl";
+                } else {
+                    growthEl.innerHTML = `<span class="text-slate-600">0 <span class="text-xs">타</span></span>`;
+                    growthSub.innerText = `이전 세션과 동일`;
+                    growthIcon.className = "w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center text-xl";
+                }
+            } else {
+                growthEl.innerText = '-';
+                growthSub.innerText = '세션 2개 이상 필요';
+            }
+
+            // Render Chart.js
+            renderProgressChart(chronologicalRecords);
+
+            // Render detailed analytics breakdown table
+            renderAnalyticsTable(chronologicalRecords);
+        }
+
+        function renderProgressChart(chartData) {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            const emptyPlaceholder = document.getElementById('chart-empty-placeholder');
+
+            if (chartData.length === 0) {
+                emptyPlaceholder.classList.remove('hidden');
+                if (chartInstance) chartInstance.destroy();
+                return;
+            }
+
+            emptyPlaceholder.classList.add('hidden');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const labels = chartData.map(r => `${r.date.substring(5)} (${r.period}교시)`);
+            const dataKeys = chartData.map(r => r.maxKeys || 0);
+            const dataWords = chartData.map(r => r.maxWords || 0);
+            const dataSentences = chartData.map(r => r.maxSentences || 0);
+
+            const datasets = [];
+
+            if (chartFilter === 'all' || chartFilter === 'keys') {
+                datasets.push({
+                    label: '자리 타속 (키자리)',
+                    data: dataKeys,
+                    borderColor: '#0284c7', // Sky-600
+                    backgroundColor: 'rgba(2, 132, 199, 0.08)',
+                    borderWidth: 3,
+                    tension: 0.35,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    fill: true
+                });
+            }
+
+            if (chartFilter === 'all' || chartFilter === 'words') {
+                datasets.push({
+                    label: '단어 타속 (낱말)',
+                    data: dataWords,
+                    borderColor: '#059669', // Emerald-600
+                    backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                    borderWidth: 3,
+                    tension: 0.35,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    fill: true
+                });
+            }
+
+            if (chartFilter === 'all' || chartFilter === 'sentences') {
+                datasets.push({
+                    label: '문장 타속 (글)',
+                    data: dataSentences,
+                    borderColor: '#9333ea', // Purple-600
+                    backgroundColor: 'rgba(147, 51, 234, 0.08)',
+                    borderWidth: 3,
+                    tension: 0.35,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    fill: true
+                });
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: { family: 'Pretendard', weight: 'bold', size: 12 },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { family: 'Pretendard', weight: 'bold', size: 13 },
+                            bodyFont: { family: 'Pretendard', size: 12 },
+                            padding: 12,
+                            cornerRadius: 12,
+                            displayColors: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            title: { display: true, text: '최고 타속 (타/분)', font: { family: 'Pretendard', size: 11 } }
+                        },
+                        x: {
+                            grid: { color: '#f1f5f9' },
+                            title: { display: true, text: '측정 날짜 (교시)', font: { family: 'Pretendard', size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderAnalyticsTable(chronologicalRecords) {
+            const tbody = document.getElementById('analytics-table-body');
+            tbody.innerHTML = '';
+
+            // Show newest on top for table view
+            const sortedDesc = [...chronologicalRecords].reverse();
+
+            sortedDesc.forEach((rec, idx) => {
+                const prevRec = sortedDesc[idx + 1]; // earlier session
+                let growthBadge = `<span class="text-2xs text-slate-400 font-medium">-</span>`;
+
+                if (prevRec) {
+                    const currentAvg = ((rec.maxKeys || 0) + (rec.maxWords || 0) + (rec.maxSentences || 0)) / 3;
+                    const prevAvg = ((prevRec.maxKeys || 0) + (prevRec.maxWords || 0) + (prevRec.maxSentences || 0)) / 3;
+                    const diff = Math.round(currentAvg - prevAvg);
+
+                    if (diff > 0) {
+                        growthBadge = `<span class="px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">+${diff} 타 ▲</span>`;
+                    } else if (diff < 0) {
+                        growthBadge = `<span class="px-2 py-0.5 rounded-full text-2xs font-bold bg-rose-50 text-rose-700 border border-rose-200">${diff} 타 ▼</span>`;
+                    } else {
+                        growthBadge = `<span class="px-2 py-0.5 rounded-full text-2xs font-bold bg-slate-100 text-slate-600">유지 =</span>`;
+                    }
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-bold text-slate-800">${rec.date} <span class="text-xs font-normal text-slate-500">(${rec.period}교시)</span></td>
+                    <td class="py-3 px-3 text-center font-bold text-sky-600">${rec.maxKeys || 0}</td>
+                    <td class="py-3 px-3 text-center font-bold text-emerald-600">${rec.maxWords || 0}</td>
+                    <td class="py-3 px-3 text-center font-bold text-purple-600">${rec.maxSentences || 0}</td>
+                    <td class="py-3 px-4 text-center">${growthBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Form: Add Student
+        document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+
+            const nameInput = document.getElementById('new-student-name');
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            try {
+                const studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+                const docRef = await addDoc(studentsRef, {
+                    name: name,
+                    createdAt: new Date().toISOString()
+                });
+
+                showToast(`'${name}' 학생이 추가되었습니다.`, 'success');
+                nameInput.value = '';
+                closeModal('addStudentModal');
+                selectStudent(docRef.id);
+            } catch (error) {
+                console.error("Add student error:", error);
+                showToast("학생 추가 도중 오류가 발생했습니다.", "error");
+            }
+        });
+
+        // Form: Edit Student Name
+        document.getElementById('edit-student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !activeStudentId) return;
+
+            const nameInput = document.getElementById('edit-student-name-input');
+            const newName = nameInput.value.trim();
+            if (!newName) return;
+
+            try {
+                const studentRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', activeStudentId);
+                await updateDoc(studentRef, { name: newName });
+                showToast("학생 이름이 변경되었습니다.", "success");
+                closeModal('editStudentModal');
+            } catch (error) {
+                console.error("Edit student error:", error);
+                showToast("수정 실패", "error");
+            }
+        });
+
+        // Form: Record Attempt Submission
+        document.getElementById('record-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !activeStudentId) return;
+
+            const date = document.getElementById('input-date').value;
+            const period = parseInt(document.getElementById('input-period').value, 10);
+            const keys = parseInt(document.getElementById('input-keys').value, 10);
+            const words = parseInt(document.getElementById('input-words').value, 10);
+            const sentences = parseInt(document.getElementById('input-sentences').value, 10);
+
+            if (!date || isNaN(period) || isNaN(keys) || isNaN(words) || isNaN(sentences)) {
+                showToast("모든 수치를 올바르게 입력해주세요.", "error");
+                return;
+            }
+
+            try {
+                // Find existing session record for (activeStudentId, date, period)
+                const existingRec = recordsList.find(r => 
+                    r.studentId === activeStudentId && 
+                    r.date === date && 
+                    r.period === period
+                );
+
+                const newAttempt = {
+                    keys,
+                    words,
+                    sentences,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (existingRec) {
+                    // Calculate Peak Speeds
+                    const maxKeys = Math.max(existingRec.maxKeys || 0, keys);
+                    const maxWords = Math.max(existingRec.maxWords || 0, words);
+                    const maxSentences = Math.max(existingRec.maxSentences || 0, sentences);
+                    const updatedAttempts = [...(existingRec.attempts || []), newAttempt];
+
+                    const recRef = doc(db, 'artifacts', appId, 'public', 'data', 'records', existingRec.id);
+                    await updateDoc(recRef, {
+                        maxKeys,
+                        maxWords,
+                        maxSentences,
+                        attempts: updatedAttempts,
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    if (keys > (existingRec.maxKeys || 0) || words > (existingRec.maxWords || 0) || sentences > (existingRec.maxSentences || 0)) {
+                        showToast("🎉 축하합니다! 최고 타속 기록이 갱신되었습니다!", "success");
+                    } else {
+                        showToast("새 시도가 기록되었습니다. (최고 타속 유지)", "info");
+                    }
+                } else {
+                    // Create new session record
+                    const recordsRef = collection(db, 'artifacts', appId, 'public', 'data', 'records');
+                    await addDoc(recordsRef, {
+                        studentId: activeStudentId,
+                        date,
+                        period,
+                        maxKeys: keys,
+                        maxWords: words,
+                        maxSentences: sentences,
+                        attempts: [newAttempt],
+                        createdAt: new Date().toISOString()
+                    });
+                    showToast("타속 기록이 추가되었습니다.", "success");
+                }
+
+                // Reset inputs except Date & Period
+                document.getElementById('input-keys').value = '';
+                document.getElementById('input-words').value = '';
+                document.getElementById('input-sentences').value = '';
+                document.getElementById('input-keys').focus();
+
+            } catch (error) {
+                console.error("Save record error:", error);
+                showToast("기록 저장 중 오류가 발생했습니다.", "error");
+            }
+        });
+
+        window.switchWorkspaceView = function(view) {
+            activeView = view;
+            const btnInput = document.getElementById('tab-btn-input');
+            const btnChart = document.getElementById('tab-btn-chart');
+            const viewInput = document.getElementById('view-input');
+            const viewChart = document.getElementById('view-chart');
+
+            if (view === 'input') {
+                btnInput.className = "px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all flex items-center gap-1.5";
+                btnChart.className = "px-4 py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
+                viewInput.classList.remove('hidden');
+                viewChart.classList.add('hidden');
+                viewChart.classList.remove('flex');
+            } else {
+                btnChart.className = "px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-2xs transition-all flex items-center gap-1.5";
+                btnInput.className = "px-4 py-2 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center gap-1.5";
+                viewInput.classList.add('hidden');
+                viewChart.classList.remove('hidden');
+                viewChart.classList.add('flex');
+
+                if (chartInstance) {
+                    setTimeout(() => chartInstance.resize(), 50);
+                }
+            }
+        };
+
+        window.filterChartSeries = function(filter) {
+            chartFilter = filter;
+            ['all', 'keys', 'words', 'sentences'].forEach(f => {
+                const btn = document.getElementById(`chart-filter-${f}`);
+                if (f === filter) {
+                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-900 text-white shadow-2xs transition-all";
+                } else {
+                    btn.className = "px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all";
+                }
+            });
+
+            if (activeStudentId) {
+                const studentRecords = recordsList.filter(r => r.studentId === activeStudentId);
+                const chronological = [...studentRecords].sort((a, b) => {
+                    const dateCmp = (a.date || '').localeCompare(b.date || '');
+                    if (dateCmp !== 0) return dateCmp;
+                    return (a.period || 0) - (b.period || 0);
+                });
+                renderProgressChart(chronological);
+            }
+        };
+
+        window.openEditStudentModal = function() {
+            if (!activeStudentId) return;
+            const student = studentsList.find(s => s.id === activeStudentId);
+            if (!student) return;
+
+            document.getElementById('edit-student-name-input').value = student.name;
+            openModal('editStudentModal');
+        };
+
+        window.confirmDeleteStudent = function() {
+            if (!activeStudentId) return;
+            const student = studentsList.find(s => s.id === activeStudentId);
+            if (!student) return;
+
+            document.getElementById('confirm-modal-title').innerText = `'${student.name}' 학생 삭제`;
+            document.getElementById('confirm-modal-desc').innerText = "해당 학생의 프로필과 모든 타속 측정 기록이 영구적으로 삭제됩니다.";
+            
+            pendingConfirmAction = async () => {
+                try {
+                    // Delete student doc
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'students', activeStudentId));
+                    // Delete associated records
+                    const studentRecords = recordsList.filter(r => r.studentId === activeStudentId);
+                    for (const r of studentRecords) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', r.id));
+                    }
+                    showToast("학생 프로필 및 관련 기록이 삭제되었습니다.", "info");
+                    closeModal('confirmModal');
+                } catch (err) {
+                    console.error("Delete student error:", err);
+                    showToast("삭제 도중 오류 발생", "error");
+                }
+            };
+
+            openModal('confirmModal');
+        };
+
+        window.confirmDeleteRecord = function(recordId) {
+            document.getElementById('confirm-modal-title').innerText = "기록 삭제";
+            document.getElementById('confirm-modal-desc').innerText = "선택한 교시의 타속 측정 기록을 삭제하시겠습니까?";
+            
+            pendingConfirmAction = async () => {
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'records', recordId));
+                    showToast("기록이 삭제되었습니다.", "info");
+                    closeModal('confirmModal');
+                } catch (err) {
+                    console.error("Delete record error:", err);
+                    showToast("삭제 도중 오류 발생", "error");
+                }
+            };
+
+            openModal('confirmModal');
+        };
+
+        document.getElementById('confirm-action-btn').addEventListener('click', () => {
+            if (pendingConfirmAction) pendingConfirmAction();
+        });
+
+        window.viewAttemptDetails = function(recordId) {
+            const rec = recordsList.find(r => r.id === recordId);
+            if (!rec) return;
+
+            document.getElementById('attempt-modal-title').innerText = `${rec.date} (${rec.period}교시) 시도 이력`;
+            const tbody = document.getElementById('attempt-list-body');
+            tbody.innerHTML = '';
+
+            const attempts = rec.attempts && rec.attempts.length > 0 ? rec.attempts : [{
+                keys: rec.maxKeys,
+                words: rec.maxWords,
+                sentences: rec.maxSentences,
+                timestamp: rec.createdAt
+            }];
+
+            attempts.forEach((att, idx) => {
+                const timeStr = att.timestamp ? new Date(att.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : `시도 ${idx + 1}`;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="py-2.5 font-medium text-slate-700">${timeStr} (${idx + 1}회차)</td>
+                    <td class="py-2.5 text-center font-bold text-sky-600">${att.keys || 0}</td>
+                    <td class="py-2.5 text-center font-bold text-emerald-600">${att.words || 0}</td>
+                    <td class="py-2.5 text-center font-bold text-purple-600">${att.sentences || 0}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            openModal('attemptDetailModal');
+        };
+
+        window.openModal = function(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeModal = function(id) {
+            const modal = document.getElementById(id);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        window.copyShareLink = function() {
+            const url = window.location.href;
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = url;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+
+            showToast("공유 링크가 클립보드에 복사되었습니다! 누구에게나 전달하세요.", "success");
+        };
+
+        window.showToast = function(msg, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = msg;
+            if (type === 'success') {
+                toastIcon.className = "w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs";
+                toastIcon.innerHTML = `<i class="fa-solid fa-check"></i>`;
+            } else if (type === 'error') {
+                toastIcon.className = "w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center text-xs";
+                toastIcon.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+            } else {
+                toastIcon.className = "w-6 h-6 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs";
+                toastIcon.innerHTML = `<i class="fa-solid fa-info"></i>`;
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3200);
+        };
+
+        function escapeHTML(str) {
+            return (str || '').replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
