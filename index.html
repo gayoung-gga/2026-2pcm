@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>학생 타속 기록 및 성장 그래프</title>
+  <title>학생 타속 기록 및 성장 관리</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f8f9fa; color: #333; padding: 20px; max-width: 900px; margin: 0 auto; }
@@ -11,7 +11,7 @@
     h1 { font-size: 1.6rem; color: #212529; font-weight: 700; }
     p.subtitle { color: #6c757d; font-size: 0.9rem; margin-top: 6px; }
 
-    /* 학생 탭 스타일 */
+    /* 학생 탭 */
     .tab-container { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
     .tab-btn { background: #e9ecef; border: none; padding: 10px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.95rem; transition: all 0.2s; }
     .tab-btn.active { background: #4a90e2; color: #fff; }
@@ -23,40 +23,60 @@
     .card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e9ecef; }
     .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; color: #343a40; display: flex; align-items: center; justify-content: space-between; }
 
-    /* 입력 양식 */
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { font-size: 0.85rem; font-weight: 600; color: #495057; }
-    .form-group input, .form-group select { padding: 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; outline: none; }
-    .form-group input:focus, .form-group select:focus { border-color: #4a90e2; box-shadow: 0 0 0 2px rgba(74,144,226,0.2); }
+    /* 날짜 및 교시 상단 레이아웃 */
+    .session-info-bar { display: flex; gap: 16px; background: #f8f9fa; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e9ecef; flex-wrap: wrap; }
+    .session-group { display: flex; align-items: center; gap: 8px; }
+    .session-group label { font-size: 0.9rem; font-weight: 600; color: #495057; }
+    .session-group input, .session-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; outline: none; background: white; }
 
+    /* 3가지 입력 카드 레이아웃 */
+    .type-input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 10px; }
+    .type-box { background: #fff; border: 2px solid #e9ecef; border-radius: 10px; padding: 14px; transition: border-color 0.2s; }
+    .type-box.key-box { border-color: #d0ebff; }
+    .type-box.word-box { border-color: #d3f9d8; }
+    .type-box.sentence-box { border-color: #ffe8cc; }
+    .type-title { font-weight: 700; font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .type-input-row { display: flex; gap: 8px; }
+    .type-input-row input { flex: 1; padding: 8px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; outline: none; }
+    
     /* 버튼 */
-    .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-    .btn { padding: 10px 18px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: background 0.2s; }
-    .btn-primary { background: #4a90e2; color: white; flex: 1; }
-    .btn-primary:hover { background: #357abd; }
-    .btn-success { background: #28a745; color: white; flex: 1; font-size: 1rem; }
+    .btn-add { padding: 8px 14px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; white-space: nowrap; font-size: 0.9rem; }
+    .btn-key { background: #339af0; }
+    .btn-key:hover { background: #1c7ed6; }
+    .btn-word { background: #51cf66; }
+    .btn-word:hover { background: #37b24d; }
+    .btn-sentence { background: #ff922b; }
+    .btn-sentence:hover { background: #f76707; }
+    .btn-success { background: #28a745; color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
     .btn-success:hover { background: #218838; }
 
+    /* 최고 타속 현황 요약 바 */
+    .best-summary-bar { display: flex; gap: 12px; background: #e7f5ff; border: 1px solid #a5d8ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: space-around; }
+    .best-summary-item { font-size: 0.95rem; font-weight: 600; color: #1864ab; }
+    .best-summary-val { font-size: 1.1rem; color: #0b7285; font-weight: 800; }
+
     /* 시도 목록 표 */
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.9rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
     th, td { border: 1px solid #e9ecef; padding: 10px; text-align: center; }
     th { background: #f1f3f5; font-weight: 600; color: #495057; }
-    .highlight-best { background-color: #e8f4fe; font-weight: bold; color: #1971c2; }
-    .badge-best { background: #339af0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 4px; }
+    .badge-type { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
+    .badge-key { background: #339af0; }
+    .badge-word { background: #51cf66; }
+    .badge-sentence { background: #ff922b; }
+    .badge-best { background: #fcc419; color: #343a40; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 6px; font-weight: bold; }
 
     /* 그래프 용 캔버스 */
     .chart-container { position: relative; height: 300px; width: 100%; margin-top: 15px; }
     canvas { width: 100% !important; height: 100% !important; }
 
-    .empty-msg { text-align: center; color: #868e96; padding: 30px 0; font-size: 0.95rem; }
+    .empty-msg { text-align: center; color: #868e96; padding: 26px 0; font-size: 0.95rem; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>⌨️ 학생 타속 기록 및 성장 관리</h1>
-    <p class="subtitle">학생별 타속 시도 기록과 최고 타속 진전도를 한눈에 확인하세요.</p>
+    <p class="subtitle">개별 타수를 차근차근 기록하고 최종 성장 진전도를 확인하세요.</p>
   </header>
 
   <!-- 학생 탭 목록 -->
@@ -70,7 +90,9 @@
       students: [
         { id: 'std_1', name: '김학생', attempts: [], confirmedHistory: [] }
       ],
-      activeStudentId: 'std_1'
+      activeStudentId: 'std_1',
+      lastSelectedDate: new Date().toISOString().split('T')[0],
+      lastSelectedPeriod: '1교시'
     };
 
     function saveData() {
@@ -81,8 +103,11 @@
       if (!appData.students || appData.students.length === 0) {
         appData.students = [{ id: 'std_1', name: '김학생', attempts: [], confirmedHistory: [] }];
         appData.activeStudentId = 'std_1';
-        saveData();
       }
+      if (!appData.lastSelectedDate) appData.lastSelectedDate = new Date().toISOString().split('T')[0];
+      if (!appData.lastSelectedPeriod) appData.lastSelectedPeriod = '1교시';
+      saveData();
+
       renderTabs();
       renderContent();
     }
@@ -151,94 +176,114 @@
         return;
       }
 
-      const today = new Date().toISOString().split('T')[0];
       const best = getBestSpeeds(student.attempts);
 
       main.innerHTML = `
         <div class="card">
-          <div class="card-title">📝 타속 시도 기록하기</div>
-          <form id="attemptForm" onsubmit="addAttempt(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label>날짜</label>
-                <input type="date" id="inputDate" value="${today}" required>
-              </div>
-              <div class="form-group">
-                <label>교시</label>
-                <select id="inputPeriod" required>
-                  <option value="1교시">1교시</option>
-                  <option value="2교시">2교시</option>
-                  <option value="3교시">3교시</option>
-                  <option value="4교시">4교시</option>
-                  <option value="5교시">5교시</option>
-                  <option value="6교시">6교시</option>
-                  <option value="방과후">방과후</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label>자리 타수 (타/분)</label>
-                <input type="number" id="inputKey" placeholder="예: 150" min="0" required>
-              </div>
-              <div class="form-group">
-                <label>단어 타수 (타/분)</label>
-                <input type="number" id="inputWord" placeholder="예: 120" min="0" required>
-              </div>
-              <div class="form-group">
-                <label>문장 타수 (타/분)</label>
-                <input type="number" id="inputSentence" placeholder="예: 90" min="0" required>
+          <div class="card-title">📝 타속 개별 기록하기</div>
+          
+          <!-- 날짜 및 교시 선택 (교시 고정) -->
+          <div class="session-info-bar">
+            <div class="session-group">
+              <label>📅 날짜:</label>
+              <input type="date" id="inputDate" value="${appData.lastSelectedDate}" onchange="updateSessionInfo()">
+            </div>
+            <div class="session-group">
+              <label>⏰ 교시:</label>
+              <select id="inputPeriod" onchange="updateSessionInfo()">
+                ${['1교시','2교시','3교시','4교시','5교시','6교시','방과후'].map(p => `
+                  <option value="${p}" ${appData.lastSelectedPeriod === p ? 'selected' : ''}>${p}</option>
+                `).join('')}
+              </select>
+              <span style="font-size:0.8rem; color:#868e96; margin-left:4px;">(교시 선택 시 자동 고정됨)</span>
+            </div>
+          </div>
+
+          <!-- 3개 개별 입력 박스 -->
+          <div class="type-input-grid">
+            
+            <div class="type-box key-box">
+              <div class="type-title" style="color:#1c7ed6;">⌨️ 자리 타수</div>
+              <div class="type-input-row">
+                <input type="number" id="inputKey" placeholder="타수 입력" min="0">
+                <button class="btn-add btn-key" onclick="addSingleAttempt('key')">+ 자리 기록</button>
               </div>
             </div>
-            <div class="btn-group">
-              <button type="submit" class="btn btn-primary">+ 시도 기록 추가</button>
+
+            <div class="type-box word-box">
+              <div class="type-title" style="color:#2b8a3e;">📝 단어 타수</div>
+              <div class="type-input-row">
+                <input type="number" id="inputWord" placeholder="타수 입력" min="0">
+                <button class="btn-add btn-word" onclick="addSingleAttempt('word')">+ 단어 기록</button>
+              </div>
             </div>
-          </form>
+
+            <div class="type-box sentence-box">
+              <div class="type-title" style="color:#d9480f;">💬 문장 타수</div>
+              <div class="type-input-row">
+                <input type="number" id="inputSentence" placeholder="타수 입력" min="0">
+                <button class="btn-add btn-sentence" onclick="addSingleAttempt('sentence')">+ 문장 기록</button>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <div class="card">
           <div class="card-title">
             <span>📋 현재 시도 목록</span>
-            <span style="font-size:0.85rem; font-weight:normal; color:#6c757d;">(여러 번 시도 후 최종 확정을 누르세요)</span>
+            <span style="font-size:0.85rem; font-weight:normal; color:#6c757d;">(연습 후 아래 버튼으로 확정하세요)</span>
           </div>
-          ${student.attempts.length === 0 ? `
-            <div class="empty-msg">아직 기록된 시도가 없습니다. 위에서 타수를 입력해 보세요.</div>
-          ` : `
+
+          ${student.attempts.length > 0 ? `
+            <div class="best-summary-bar">
+              <div class="best-summary-item">⌨️ 자리 최고: <span class="best-summary-val">${best.key}타</span></div>
+              <div class="best-summary-item">📝 단어 최고: <span class="best-summary-val">${best.word}타</span></div>
+              <div class="best-summary-item">💬 문장 최고: <span class="best-summary-val">${best.sentence}타</span></div>
+            </div>
+
             <table>
               <thead>
                 <tr>
-                  <th>시도</th>
+                  <th>회차</th>
                   <th>날짜</th>
                   <th>교시</th>
-                  <th>자리 타수</th>
-                  <th>단어 타수</th>
-                  <th>문장 타수</th>
+                  <th>구분</th>
+                  <th>기록 타수</th>
                   <th>삭제</th>
                 </tr>
               </thead>
               <tbody>
-                ${student.attempts.map((att, idx) => `
-                  <tr>
-                    <td>${idx + 1}회차</td>
-                    <td>${att.date}</td>
-                    <td>${att.period}</td>
-                    <td class="${att.key === best.key ? 'highlight-best' : ''}">
-                      ${att.key} ${att.key === best.key && att.key > 0 ? '<span class="badge-best">최고</span>' : ''}
-                    </td>
-                    <td class="${att.word === best.word ? 'highlight-best' : ''}">
-                      ${att.word} ${att.word === best.word && att.word > 0 ? '<span class="badge-best">최고</span>' : ''}
-                    </td>
-                    <td class="${att.sentence === best.sentence ? 'highlight-best' : ''}">
-                      ${att.sentence} ${att.sentence === best.sentence && att.sentence > 0 ? '<span class="badge-best">최고</span>' : ''}
-                    </td>
-                    <td><button onclick="removeAttempt(${idx})" style="border:none; background:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button></td>
-                  </tr>
-                `).join('')}
+                ${student.attempts.map((att, idx) => {
+                  const isBest = (att.type === 'key' && att.speed === best.key && att.speed > 0) ||
+                                 (att.type === 'word' && att.speed === best.word && att.speed > 0) ||
+                                 (att.type === 'sentence' && att.speed === best.sentence && att.speed > 0);
+                  const typeLabel = att.type === 'key' ? '자리' : att.type === 'word' ? '단어' : '문장';
+                  const badgeClass = att.type === 'key' ? 'badge-key' : att.type === 'word' ? 'badge-word' : 'badge-sentence';
+                  
+                  return `
+                    <tr>
+                      <td>${idx + 1}회차</td>
+                      <td>${att.date}</td>
+                      <td>${att.period}</td>
+                      <td><span class="badge-type ${badgeClass}">${typeLabel}</span></td>
+                      <td style="font-weight:bold;">
+                        ${att.speed}타 ${isBest ? '<span class="badge-best">👑 최고</span>' : ''}
+                      </td>
+                      <td><button onclick="removeAttempt(${idx})" style="border:none; background:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button></td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
+
             <div style="margin-top: 20px;">
-              <button class="btn btn-success" style="width:100%;" onclick="confirmFinalRecord()">
+              <button class="btn-success" onclick="confirmFinalRecord()">
                 ✅ 최종 확인 및 진전도 그래프 기록 저장
               </button>
             </div>
+          ` : `
+            <div class="empty-msg">아직 기록된 시도가 없습니다. 위에서 타수를 입력해 보세요.</div>
           `}
         </div>
 
@@ -259,33 +304,46 @@
       }
     }
 
-    function getBestSpeeds(attempts) {
-      if (!attempts || attempts.length === 0) return { key: 0, word: 0, sentence: 0 };
-      return {
-        key: Math.max(...attempts.map(a => Number(a.key) || 0)),
-        word: Math.max(...attempts.map(a => Number(a.word) || 0)),
-        sentence: Math.max(...attempts.map(a => Number(a.sentence) || 0))
-      };
+    function updateSessionInfo() {
+      const dateVal = document.getElementById('inputDate').value;
+      const periodVal = document.getElementById('inputPeriod').value;
+      appData.lastSelectedDate = dateVal;
+      appData.lastSelectedPeriod = periodVal;
+      saveData();
     }
 
-    function addAttempt(e) {
-      e.preventDefault();
+    function addSingleAttempt(type) {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
       if (!student) return;
 
       const date = document.getElementById('inputDate').value;
       const period = document.getElementById('inputPeriod').value;
-      const key = Number(document.getElementById('inputKey').value);
-      const word = Number(document.getElementById('inputWord').value);
-      const sentence = Number(document.getElementById('inputSentence').value);
+      
+      let inputElem;
+      if (type === 'key') inputElem = document.getElementById('inputKey');
+      if (type === 'word') inputElem = document.getElementById('inputWord');
+      if (type === 'sentence') inputElem = document.getElementById('inputSentence');
 
-      student.attempts.push({ date, period, key, word, sentence });
+      const speed = Number(inputElem.value);
+      if (!inputElem.value || isNaN(speed) || speed < 0) {
+        alert('올바른 타수를 입력해주세요.');
+        return;
+      }
+
+      // 교시 및 날짜 고정 저장
+      appData.lastSelectedDate = date;
+      appData.lastSelectedPeriod = period;
+
+      student.attempts.push({
+        id: Date.now(),
+        date,
+        period,
+        type, // 'key', 'word', 'sentence'
+        speed
+      });
+
       saveData();
       renderContent();
-
-      document.getElementById('inputKey').value = '';
-      document.getElementById('inputWord').value = '';
-      document.getElementById('inputSentence').value = '';
     }
 
     function removeAttempt(index) {
@@ -294,6 +352,20 @@
       student.attempts.splice(index, 1);
       saveData();
       renderContent();
+    }
+
+    function getBestSpeeds(attempts) {
+      if (!attempts || attempts.length === 0) return { key: 0, word: 0, sentence: 0 };
+      
+      const keySpeeds = attempts.filter(a => a.type === 'key').map(a => a.speed);
+      const wordSpeeds = attempts.filter(a => a.type === 'word').map(a => a.speed);
+      const sentenceSpeeds = attempts.filter(a => a.type === 'sentence').map(a => a.speed);
+
+      return {
+        key: keySpeeds.length > 0 ? Math.max(...keySpeeds) : 0,
+        word: wordSpeeds.length > 0 ? Math.max(...wordSpeeds) : 0,
+        sentence: sentenceSpeeds.length > 0 ? Math.max(...sentenceSpeeds) : 0
+      };
     }
 
     function confirmFinalRecord() {
@@ -312,7 +384,7 @@
 
       student.attempts = [];
       saveData();
-      alert('최종 최고 타속이 기록 저장되었습니다!');
+      alert('이번 차수의 최고 타속이 기록에 저장되었습니다!');
       renderContent();
     }
 
@@ -395,9 +467,9 @@
         });
       };
 
-      drawLine('key', '#4a90e2');      // 자리
-      drawLine('word', '#28a745');     // 단어
-      drawLine('sentence', '#ff922b'); // 문장
+      drawLine('key', '#339af0');      // 자리 (파랑)
+      drawLine('word', '#51cf66');     // 단어 (초록)
+      drawLine('sentence', '#ff922b'); // 문장 (주황)
 
       ctx.fillStyle = '#495057';
       ctx.font = '11px sans-serif';
@@ -412,8 +484,8 @@
       ctx.font = '12px sans-serif';
 
       const items = [
-        { name: '자리', color: '#4a90e2' },
-        { name: '단어', color: '#28a745' },
+        { name: '자리', color: '#339af0' },
+        { name: '단어', color: '#51cf66' },
         { name: '문장', color: '#ff922b' }
       ];
 
