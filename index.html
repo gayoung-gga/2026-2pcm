@@ -3,15 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>학생 타속 기록 및 성장 관리</title>
+  <title>학생 타속 기록 및 실시간 학급 관리</title>
+
+  <!-- 파이어베이스 SDK 연동 -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f8f9fa; color: #333; padding: 16px; max-width: 900px; margin: 0 auto; }
+    body { background-color: #f8f9fa; color: #333; padding: 16px; max-width: 950px; margin: 0 auto; }
     header { text-align: center; margin-bottom: 20px; padding: 10px 0; border-bottom: 2px solid #e9ecef; }
     h1 { font-size: 1.5rem; color: #212529; font-weight: 700; }
     p.subtitle { color: #6c757d; font-size: 0.85rem; margin-top: 6px; }
 
-    /* 학생 탭 (깔끔하게 정돈) */
+    /* 연결 상태 표시 */
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; margin-bottom: 10px; }
+    .status-online { background: #d3f9d8; color: #2b8a3e; }
+    .status-offline { background: #ffe3e3; color: #e03131; }
+
+    /* 학생 탭 */
     .tab-container { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
     .tab-btn { background: #e9ecef; border: none; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; }
     .tab-btn.active { background: #4a90e2; color: #fff; }
@@ -19,8 +29,19 @@
     .add-student-btn { background: #28a745; color: white; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 
     /* 카드 레이아웃 */
-    .card { background: #ffffff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e9ecef; }
+    .card { background: #ffffff; border-radius: 12px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 18px; border: 1px solid #e9ecef; }
     .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; color: #343a40; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+    /* 명예의 전당 그리드 */
+    .fame-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; }
+    .fame-card { background: #f8f9fa; border-radius: 10px; padding: 14px; border: 1px solid #e9ecef; }
+    .fame-card.key-fame { border-left: 5px solid #339af0; }
+    .fame-card.word-fame { border-left: 5px solid #51cf66; }
+    .fame-card.sentence-fame { border-left: 5px solid #ff922b; }
+    .fame-category-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .fame-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #dee2e6; font-size: 0.88rem; }
+    .fame-item:last-child { border-bottom: none; }
+    .fame-rank { font-weight: bold; width: 24px; text-align: center; }
 
     /* 날짜 및 교시 상단 레이아웃 */
     .session-info-bar { display: flex; gap: 12px; background: #f8f9fa; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid #e9ecef; flex-wrap: wrap; align-items: center; }
@@ -28,35 +49,29 @@
     .session-group label { font-size: 0.85rem; font-weight: 600; color: #495057; white-space: nowrap; }
     .session-group input, .session-group select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; background: white; }
 
-    /* 3가지 입력 카드 반응형 그리드 */
+    /* 입력 영역 안 삐져나오게 수정 */
     .type-input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 10px; }
     .type-box { background: #fff; border: 2px solid #e9ecef; border-radius: 10px; padding: 12px; }
     .type-box.key-box { border-color: #d0ebff; }
     .type-box.word-box { border-color: #d3f9d8; }
     .type-box.sentence-box { border-color: #ffe8cc; }
     .type-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
-    
     .type-input-row { display: flex; gap: 6px; width: 100%; }
     .type-input-row input { flex: 1; min-width: 0; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; }
-    
+
     .btn-add { padding: 8px 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; white-space: nowrap; font-size: 0.85rem; flex-shrink: 0; }
     .btn-key { background: #339af0; }
-    .btn-key:hover { background: #1c7ed6; }
     .btn-word { background: #51cf66; }
-    .btn-word:hover { background: #37b24d; }
     .btn-sentence { background: #ff922b; }
-    .btn-sentence:hover { background: #f76707; }
-    .btn-success { background: #28a745; color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
-    .btn-success:hover { background: #218838; }
+    .btn-success { background: #28a745; color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 700; cursor: pointer; }
 
-    /* 최고 타속 현황 요약 바 */
+    /* 요약 바 & 테이블 */
     .best-summary-bar { display: flex; gap: 8px; background: #e7f5ff; border: 1px solid #a5d8ff; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; flex-wrap: wrap; justify-content: space-around; }
     .best-summary-item { font-size: 0.85rem; font-weight: 600; color: #1864ab; }
     .best-summary-val { font-size: 1rem; color: #0b7285; font-weight: 800; }
 
-    /* 시도 목록 표 */
     .table-responsive { overflow-x: auto; width: 100%; margin-top: 8px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 400px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 450px; }
     th, td { border: 1px solid #e9ecef; padding: 8px 6px; text-align: center; }
     th { background: #f1f3f5; font-weight: 600; color: #495057; }
     .badge-type { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; }
@@ -65,40 +80,96 @@
     .badge-sentence { background: #ff922b; }
     .badge-best { background: #fcc419; color: #343a40; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; margin-left: 4px; font-weight: bold; }
 
-    /* 그래프 용 캔버스 */
     .chart-container { position: relative; height: 260px; width: 100%; margin-top: 10px; }
     canvas { width: 100% !important; height: 100% !important; }
-
     .empty-msg { text-align: center; color: #868e96; padding: 20px 0; font-size: 0.9rem; }
 
-    /* 하단 전용 삭제 버튼 스타일 */
     .delete-container { display: flex; justify-content: flex-end; margin-top: 24px; margin-bottom: 12px; }
-    .btn-delete-student { background: #fff; border: 1px solid #ffc9c9; color: #e03131; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
-    .btn-delete-student:hover { background: #fff5f5; border-color: #ffa8a8; color: #c92a2a; }
+    .btn-delete-student { background: #fff; border: 1px solid #ffc9c9; color: #e03131; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .btn-delete-student:hover { background: #fff5f5; }
 
     @media (max-width: 480px) {
       body { padding: 10px; }
       .type-input-grid { grid-template-columns: 1fr; }
       .session-info-bar { flex-direction: column; align-items: stretch; }
-      .session-group { justify-content: space-between; }
     }
   </style>
 </head>
 <body>
 
   <header>
-    <h1>⌨️ 학생 타속 기록 및 성장 관리</h1>
-    <p class="subtitle">개별 타수를 차근차근 기록하고 최종 성장 진전도를 확인하세요.</p>
+    <h1>⌨️ 우리 반 타속 기록 및 성장 관리</h1>
+    <p class="subtitle">아이패드로 실시간 공유되는 우리 반 타자 연습 현황판</p>
+    <div style="text-align: center; margin-top: 8px;">
+      <span id="connectionBadge" class="status-badge status-offline">📡 동기화 연결 중...</span>
+    </div>
   </header>
 
-  <!-- 학생 탭 목록 -->
+  <!-- 🏆 이번 주 명예의 전당 (실시간 연동) -->
+  <div class="card">
+    <div class="card-title">🏆 우리 반 명예의 전당 (영역별 1~3위)</div>
+    <div class="fame-grid" id="fameGrid">
+      <div class="empty-msg">기록을 불러오는 중입니다...</div>
+    </div>
+  </div>
+
+  <!-- 👥 우리 반 한눈에 보기 -->
+  <div class="card">
+    <div class="card-title">👥 우리 반 전체 타수 현황판</div>
+    <div class="table-responsive">
+      <table id="classOverviewTable">
+        <thead>
+          <tr>
+            <th>학생 이름</th>
+            <th>⌨️ 자리 최고</th>
+            <th>📝 단어 최고</th>
+            <th>💬 문장 최고</th>
+            <th>최근 연습 기록</th>
+          </tr>
+        </thead>
+        <tbody id="classOverviewBody">
+          <tr><td colspan="5" class="empty-msg">등록된 데이터가 없습니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 학생 선택 탭 -->
   <div class="tab-container" id="tabContainer"></div>
 
-  <!-- 메인 화면 -->
+  <!-- 메인 개인 기록 화면 -->
   <div id="mainContent"></div>
 
   <script>
-    let appData = JSON.parse(localStorage.getItem('typing_app_data')) || {
+    // ==========================================
+    // ★ [파이어베이스 설정 연결]
+    // 복사하신 firebaseConfig 내용을 아래에 붙여넣어주세요!
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCb_klM0uyJ1xa64d02RWkIBOfvf9WQBh0",
+      authDomain: "typing-app-2026-2-e9aee.firebaseapp.com",
+      databaseURL: "https://typing-app-2026-2-e9aee-default-rtdb.firebaseio.com",
+      projectId: "typing-app-2026-2-e9aee",
+      storageBucket: "typing-app-2026-2-e9aee.firebasestorage.app",
+      messagingSenderId: "330216096476",
+      appId: "1:330216096476:web:ad3b6312f300cce5f86a19"
+    };
+
+    let db;
+    let isFirebaseReady = false;
+
+    // 파이어베이스 초기화
+    try {
+      if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        isFirebaseReady = true;
+      }
+    } catch (e) {
+      console.error("Firebase 초기화 오류:", e);
+    }
+
+    let appData = {
       students: [
         { id: 'std_1', name: '김학생', attempts: [], confirmedHistory: [] }
       ],
@@ -107,21 +178,148 @@
       lastSelectedPeriod: '1교시'
     };
 
-    function saveData() {
-      localStorage.setItem('typing_app_data', JSON.stringify(appData));
+    function initFirebaseSync() {
+      const badge = document.getElementById('connectionBadge');
+      if (!isFirebaseReady) {
+        badge.className = 'status-badge status-offline';
+        badge.innerText = '⚠️ 파이어베이스 키 설정이 필요합니다 (로컬 모드 작동 중)';
+        loadLocalData();
+        renderAll();
+        return;
+      }
+
+      // 파이어베이스 데이터 실시간 감지 (on value)
+      db.ref('typing_app_data').on('value', (snapshot) => {
+        badge.className = 'status-badge status-online';
+        badge.innerText = '⚡ 아이패드 실시간 동기화 완료';
+
+        const data = snapshot.val();
+        if (data && data.students && data.students.length > 0) {
+          appData.students = data.students;
+          if (!appData.students.find(s => s.id === appData.activeStudentId)) {
+            appData.activeStudentId = appData.students[0].id;
+          }
+        }
+        renderAll();
+      }, (error) => {
+        badge.className = 'status-badge status-offline';
+        badge.innerText = '❌ 동기화 실패 (규칙 확인 필요)';
+      });
     }
 
-    function init() {
-      if (!appData.students || appData.students.length === 0) {
-        appData.students = [{ id: 'std_1', name: '김학생', attempts: [], confirmedHistory: [] }];
-        appData.activeStudentId = 'std_1';
+    function saveData() {
+      if (isFirebaseReady) {
+        db.ref('typing_app_data').set({
+          students: appData.students
+        });
+      } else {
+        localStorage.setItem('typing_app_data', JSON.stringify(appData));
       }
-      if (!appData.lastSelectedDate) appData.lastSelectedDate = new Date().toISOString().split('T')[0];
-      if (!appData.lastSelectedPeriod) appData.lastSelectedPeriod = '1교시';
-      saveData();
+    }
 
+    function loadLocalData() {
+      const local = localStorage.getItem('typing_app_data');
+      if (local) {
+        appData = JSON.parse(local);
+      }
+    }
+
+    function renderAll() {
+      renderLeaderboard();
+      renderClassOverview();
       renderTabs();
       renderContent();
+    }
+
+    // 🏆 명예의 전당 계산 및 출력
+    function renderLeaderboard() {
+      const grid = document.getElementById('fameGrid');
+      if (!appData.students || appData.students.length === 0) {
+        grid.innerHTML = '<div class="empty-msg">기록이 없습니다.</div>';
+        return;
+      }
+
+      const getTopStudents = (type) => {
+        const list = [];
+        appData.students.forEach(s => {
+          let maxSpeed = 0;
+          // 현재 시도 및 이전 확정 기록 통합 계산
+          (s.attempts || []).filter(a => a.type === type).forEach(a => { maxSpeed = Math.max(maxSpeed, a.speed); });
+          (s.confirmedHistory || []).forEach(h => { maxSpeed = Math.max(maxSpeed, h[type] || 0); });
+          if (maxSpeed > 0) {
+            list.push({ name: s.name, speed: maxSpeed });
+          }
+        });
+        return list.sort((a, b) => b.speed - a.speed).slice(0, 3);
+      };
+
+      const topKey = getTopStudents('key');
+      const topWord = getTopStudents('word');
+      const topSentence = getTopStudents('sentence');
+
+      const renderRankList = (list) => {
+        if (list.length === 0) return '<div class="empty-msg">기록 없음</div>';
+        const medals = ['🥇', '🥈', '🥉'];
+        return list.map((item, idx) => `
+          <div class="fame-item">
+            <span><span class="fame-rank">${medals[idx] || idx+1+'위'}</span> ${escapeHtml(item.name)}</span>
+            <span style="font-weight:bold; color:#1864ab;">${item.speed}타</span>
+          </div>
+        `).join('');
+      };
+
+      grid.innerHTML = `
+        <div class="fame-card key-fame">
+          <div class="fame-category-title" style="color:#1c7ed6;">⌨️ 자리 타속 Top 3</div>
+          ${renderRankList(topKey)}
+        </div>
+        <div class="fame-card word-fame">
+          <div class="fame-category-title" style="color:#2b8a3e;">📝 단어 타속 Top 3</div>
+          ${renderRankList(topWord)}
+        </div>
+        <div class="fame-card sentence-fame">
+          <div class="fame-category-title" style="color:#d9480f;">💬 문장 타속 Top 3</div>
+          ${renderRankList(topSentence)}
+        </div>
+      `;
+    }
+
+    // 👥 우리 반 전체 현황판
+    function renderClassOverview() {
+      const tbody = document.getElementById('classOverviewBody');
+      if (!appData.students || appData.students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-msg">등록된 학생이 없습니다.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = appData.students.map(s => {
+        let maxKey = 0, maxWord = 0, maxSentence = 0;
+        let lastDate = '-';
+
+        (s.attempts || []).forEach(a => {
+          if (a.type === 'key') maxKey = Math.max(maxKey, a.speed);
+          if (a.type === 'word') maxWord = Math.max(maxWord, a.speed);
+          if (a.type === 'sentence') maxSentence = Math.max(maxSentence, a.speed);
+          lastDate = a.date;
+        });
+
+        (s.confirmedHistory || []).forEach(h => {
+          maxKey = Math.max(maxKey, h.key || 0);
+          maxWord = Math.max(maxWord, h.word || 0);
+          maxSentence = Math.max(maxSentence, h.sentence || 0);
+          if (h.label) lastDate = h.label.split(' ')[0];
+        });
+
+        return `
+          <tr>
+            <td style="font-weight:bold; color:#343a40;">${escapeHtml(s.name)}</td>
+            <td><span style="color:#1c7ed6; font-weight:bold;">${maxKey}</span>타</td>
+            <td><span style="color:#2b8a3e; font-weight:bold;">${maxWord}</span>타</td>
+            <td><span style="color:#d9480f; font-weight:bold;">${maxSentence}</span>타</td>
+            <td style="color:#6c757d; font-size:0.8rem;">${lastDate}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function renderTabs() {
@@ -134,7 +332,6 @@
         btn.innerText = student.name;
         btn.onclick = () => {
           appData.activeStudentId = student.id;
-          saveData();
           renderTabs();
           renderContent();
         };
@@ -160,8 +357,6 @@
       appData.students.push(newStudent);
       appData.activeStudentId = newStudent.id;
       saveData();
-      renderTabs();
-      renderContent();
     }
 
     function deleteCurrentStudent() {
@@ -173,11 +368,10 @@
         return;
       }
 
-      if (confirm(`'${student.name}' 학생과 저장된 모든 타속 데이터가 삭제됩니다. 정말 삭제하시겠습니까?`)) {
+      if (confirm(`'${student.name}' 학생과 저장된 모든 데이터가 삭제됩니다. 삭제하시겠습니까?`)) {
         appData.students = appData.students.filter(s => s.id !== student.id);
         appData.activeStudentId = appData.students[0].id;
         saveData();
-        init();
       }
     }
 
@@ -186,15 +380,15 @@
       const student = appData.students.find(s => s.id === appData.activeStudentId);
 
       if (!student) {
-        main.innerHTML = '<div class="empty-msg">학생을 추가해 주세요.</div>';
+        main.innerHTML = '<div class="empty-msg">학생을 선택하거나 추가해주세요.</div>';
         return;
       }
 
-      const best = getBestSpeeds(student.attempts);
+      const best = getBestSpeeds(student.attempts || []);
 
       main.innerHTML = `
         <div class="card">
-          <div class="card-title">📝 타속 개별 기록하기</div>
+          <div class="card-title">📝 '${escapeHtml(student.name)}' 타속 개별 기록하기</div>
           
           <div class="session-info-bar">
             <div class="session-group">
@@ -212,7 +406,6 @@
           </div>
 
           <div class="type-input-grid">
-            
             <div class="type-box key-box">
               <div class="type-title" style="color:#1c7ed6;">⌨️ 자리 타수</div>
               <div class="type-input-row">
@@ -236,17 +429,16 @@
                 <button class="btn-add btn-sentence" onclick="addSingleAttempt('sentence')">+ 문장 기록</button>
               </div>
             </div>
-
           </div>
         </div>
 
         <div class="card">
           <div class="card-title">
             <span>📋 현재 시도 목록</span>
-            <span style="font-size:0.8rem; font-weight:normal; color:#6c757d;">(연습 완료 후 아래 버튼 클릭)</span>
+            <span style="font-size:0.8rem; font-weight:normal; color:#6c757d;">(연습 완료 후 아래 저장 버튼 클릭)</span>
           </div>
 
-          ${student.attempts.length > 0 ? `
+          ${(student.attempts && student.attempts.length > 0) ? `
             <div class="best-summary-bar">
               <div class="best-summary-item">⌨️ 자리: <span class="best-summary-val">${best.key}타</span></div>
               <div class="best-summary-item">📝 단어: <span class="best-summary-val">${best.word}타</span></div>
@@ -272,16 +464,13 @@
                                    (att.type === 'sentence' && att.speed === best.sentence && att.speed > 0);
                     const typeLabel = att.type === 'key' ? '자리' : att.type === 'word' ? '단어' : '문장';
                     const badgeClass = att.type === 'key' ? 'badge-key' : att.type === 'word' ? 'badge-word' : 'badge-sentence';
-                    
                     return `
                       <tr>
                         <td>${idx + 1}회</td>
                         <td>${att.date}</td>
                         <td>${att.period}</td>
                         <td><span class="badge-type ${badgeClass}">${typeLabel}</span></td>
-                        <td style="font-weight:bold;">
-                          ${att.speed}타 ${isBest ? '<span class="badge-best">👑최고</span>' : ''}
-                        </td>
+                        <td style="font-weight:bold;">${att.speed}타 ${isBest ? '<span class="badge-best">👑최고</span>' : ''}</td>
                         <td><button onclick="removeAttempt(${idx})" style="border:none; background:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button></td>
                       </tr>
                     `;
@@ -302,8 +491,8 @@
 
         <div class="card">
           <div class="card-title">📊 지난 최고 타수 진전도 비교</div>
-          ${student.confirmedHistory.length === 0 ? `
-            <div class="empty-msg">'최종 확인' 버튼을 누르면 진전도 그래프가 표시됩니다.</div>
+          ${(!student.confirmedHistory || student.confirmedHistory.length === 0) ? `
+            <div class="empty-msg">'최종 확인' 버튼을 누르면 개인 진전도 그래프가 저장됩니다.</div>
           ` : `
             <div class="chart-container">
               <canvas id="progressChart"></canvas>
@@ -311,7 +500,6 @@
           `}
         </div>
 
-        <!-- 맨 밑 삭제하기 버튼 영역 -->
         <div class="delete-container">
           <button class="btn-delete-student" onclick="deleteCurrentStudent()">
             🗑️ 현재 학생('${escapeHtml(student.name)}') 삭제하기
@@ -319,17 +507,14 @@
         </div>
       `;
 
-      if (student.confirmedHistory.length > 0) {
+      if (student.confirmedHistory && student.confirmedHistory.length > 0) {
         drawChart(student.confirmedHistory);
       }
     }
 
     function updateSessionInfo() {
-      const dateVal = document.getElementById('inputDate').value;
-      const periodVal = document.getElementById('inputPeriod').value;
-      appData.lastSelectedDate = dateVal;
-      appData.lastSelectedPeriod = periodVal;
-      saveData();
+      appData.lastSelectedDate = document.getElementById('inputDate').value;
+      appData.lastSelectedPeriod = document.getElementById('inputPeriod').value;
     }
 
     function addSingleAttempt(type) {
@@ -338,11 +523,7 @@
 
       const date = document.getElementById('inputDate').value;
       const period = document.getElementById('inputPeriod').value;
-      
-      let inputElem;
-      if (type === 'key') inputElem = document.getElementById('inputKey');
-      if (type === 'word') inputElem = document.getElementById('inputWord');
-      if (type === 'sentence') inputElem = document.getElementById('inputSentence');
+      let inputElem = document.getElementById(type === 'key' ? 'inputKey' : type === 'word' ? 'inputWord' : 'inputSentence');
 
       const speed = Number(inputElem.value);
       if (!inputElem.value || isNaN(speed) || speed < 0) {
@@ -350,50 +531,38 @@
         return;
       }
 
-      appData.lastSelectedDate = date;
-      appData.lastSelectedPeriod = period;
-
-      student.attempts.push({
-        id: Date.now(),
-        date,
-        period,
-        type,
-        speed
-      });
+      if (!student.attempts) student.attempts = [];
+      student.attempts.push({ id: Date.now(), date, period, type, speed });
+      inputElem.value = '';
 
       saveData();
-      renderContent();
     }
 
     function removeAttempt(index) {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
-      if (!student) return;
+      if (!student || !student.attempts) return;
       student.attempts.splice(index, 1);
       saveData();
-      renderContent();
     }
 
     function getBestSpeeds(attempts) {
       if (!attempts || attempts.length === 0) return { key: 0, word: 0, sentence: 0 };
-      
-      const keySpeeds = attempts.filter(a => a.type === 'key').map(a => a.speed);
-      const wordSpeeds = attempts.filter(a => a.type === 'word').map(a => a.speed);
-      const sentenceSpeeds = attempts.filter(a => a.type === 'sentence').map(a => a.speed);
-
+      const getList = (t) => attempts.filter(a => a.type === t).map(a => a.speed);
       return {
-        key: keySpeeds.length > 0 ? Math.max(...keySpeeds) : 0,
-        word: wordSpeeds.length > 0 ? Math.max(...wordSpeeds) : 0,
-        sentence: sentenceSpeeds.length > 0 ? Math.max(...sentenceSpeeds) : 0
+        key: getList('key').length ? Math.max(...getList('key')) : 0,
+        word: getList('word').length ? Math.max(...getList('word')) : 0,
+        sentence: getList('sentence').length ? Math.max(...getList('sentence')) : 0
       };
     }
 
     function confirmFinalRecord() {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
-      if (!student || student.attempts.length === 0) return;
+      if (!student || !student.attempts || student.attempts.length === 0) return;
 
       const best = getBestSpeeds(student.attempts);
       const lastAttempt = student.attempts[student.attempts.length - 1];
 
+      if (!student.confirmedHistory) student.confirmedHistory = [];
       student.confirmedHistory.push({
         label: `${lastAttempt.date} (${lastAttempt.period})`,
         key: best.key,
@@ -403,32 +572,24 @@
 
       student.attempts = [];
       saveData();
-      alert('이번 차수의 최고 타속이 기록에 저장되었습니다!');
-      renderContent();
+      alert('이번 차수의 최고 타속이 명예의 전당과 그래프에 반영되었습니다!');
     }
 
     function drawChart(historyData) {
       const canvas = document.getElementById('progressChart');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
 
-      const width = rect.width;
-      const height = rect.height;
-      const padding = 35;
-
+      const width = rect.width, height = rect.height, padding = 35;
       ctx.clearRect(0, 0, width, height);
-      if (historyData.length === 0) return;
 
       let maxVal = 100;
-      historyData.forEach(d => {
-        maxVal = Math.max(maxVal, d.key, d.word, d.sentence);
-      });
+      historyData.forEach(d => { maxVal = Math.max(maxVal, d.key||0, d.word||0, d.sentence||0); });
       maxVal = Math.ceil(maxVal / 50) * 50 + 50;
 
       ctx.strokeStyle = '#e9ecef';
@@ -458,14 +619,8 @@
           const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
           const val = d[keyName] || 0;
           const yPos = height - padding - ((height - padding * 2) * (val / maxVal));
-
-          if (i === 0 && historyData.length > 1) {
-            ctx.moveTo(xPos, yPos);
-          } else if (historyData.length === 1) {
-            ctx.arc(xPos, yPos, 4, 0, Math.PI * 2);
-          } else {
-            ctx.lineTo(xPos, yPos);
-          }
+          if (i === 0) ctx.moveTo(xPos, yPos);
+          else ctx.lineTo(xPos, yPos);
         });
         ctx.stroke();
 
@@ -486,9 +641,9 @@
         });
       };
 
-      drawLine('key', '#339af0');      // 자리
-      drawLine('word', '#51cf66');     // 단어
-      drawLine('sentence', '#ff922b'); // 문장
+      drawLine('key', '#339af0');
+      drawLine('word', '#51cf66');
+      drawLine('sentence', '#ff922b');
 
       ctx.fillStyle = '#495057';
       ctx.font = '10px sans-serif';
@@ -497,31 +652,13 @@
         const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
         ctx.fillText(d.label, xPos, height - 10);
       });
-
-      const legendX = width - 180;
-      const legendY = 10;
-      ctx.font = '11px sans-serif';
-
-      const items = [
-        { name: '자리', color: '#339af0' },
-        { name: '단어', color: '#51cf66' },
-        { name: '문장', color: '#ff922b' }
-      ];
-
-      items.forEach((item, idx) => {
-        ctx.fillStyle = item.color;
-        ctx.fillRect(legendX + idx * 55, legendY, 10, 10);
-        ctx.fillStyle = '#333';
-        ctx.textAlign = 'left';
-        ctx.fillText(item.name, legendX + idx * 55 + 14, legendY + 9);
-      });
     }
 
     function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    window.onload = init;
+    window.onload = initFirebaseSync;
   </script>
 </body>
 </html>
