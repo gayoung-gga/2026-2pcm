@@ -6,70 +6,81 @@
   <title>학생 타속 기록 및 성장 관리</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f8f9fa; color: #333; padding: 20px; max-width: 900px; margin: 0 auto; }
-    header { text-align: center; margin-bottom: 24px; padding: 10px 0; border-bottom: 2px solid #e9ecef; }
-    h1 { font-size: 1.6rem; color: #212529; font-weight: 700; }
-    p.subtitle { color: #6c757d; font-size: 0.9rem; margin-top: 6px; }
+    body { background-color: #f8f9fa; color: #333; padding: 16px; max-width: 900px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 20px; padding: 10px 0; border-bottom: 2px solid #e9ecef; }
+    h1 { font-size: 1.5rem; color: #212529; font-weight: 700; }
+    p.subtitle { color: #6c757d; font-size: 0.85rem; margin-top: 6px; }
 
     /* 학생 탭 */
-    .tab-container { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
-    .tab-btn { background: #e9ecef; border: none; padding: 10px 18px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.95rem; transition: all 0.2s; }
+    .tab-container { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
+    .tab-btn { background: #e9ecef; border: none; padding: 8px 14px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; }
     .tab-btn.active { background: #4a90e2; color: #fff; }
     .tab-btn:hover:not(.active) { background: #dee2e6; }
-    .add-student-btn { background: #28a745; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
-    .delete-student-btn { background: #dc3545; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-left: 6px; }
+    .add-student-btn { background: #28a745; color: white; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .delete-student-btn { background: #dc3545; color: white; border: none; padding: 2px 5px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; margin-left: 6px; }
 
     /* 카드 레이아웃 */
-    .card { background: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #e9ecef; }
-    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 16px; color: #343a40; display: flex; align-items: center; justify-content: space-between; }
+    .card { background: #ffffff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e9ecef; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; color: #343a40; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
     /* 날짜 및 교시 상단 레이아웃 */
-    .session-info-bar { display: flex; gap: 16px; background: #f8f9fa; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e9ecef; flex-wrap: wrap; }
-    .session-group { display: flex; align-items: center; gap: 8px; }
-    .session-group label { font-size: 0.9rem; font-weight: 600; color: #495057; }
-    .session-group input, .session-group select { padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; outline: none; background: white; }
+    .session-info-bar { display: flex; gap: 12px; background: #f8f9fa; padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; border: 1px solid #e9ecef; flex-wrap: wrap; align-items: center; }
+    .session-group { display: flex; align-items: center; gap: 6px; }
+    .session-group label { font-size: 0.85rem; font-weight: 600; color: #495057; white-space: nowrap; }
+    .session-group input, .session-group select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; background: white; }
 
-    /* 3가지 입력 카드 레이아웃 */
-    .type-input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 10px; }
-    .type-box { background: #fff; border: 2px solid #e9ecef; border-radius: 10px; padding: 14px; transition: border-color 0.2s; }
+    /* 3가지 입력 카드 반응형 그리드 (안 삐져나오게 수정) */
+    .type-input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 10px; }
+    .type-box { background: #fff; border: 2px solid #e9ecef; border-radius: 10px; padding: 12px; }
     .type-box.key-box { border-color: #d0ebff; }
     .type-box.word-box { border-color: #d3f9d8; }
     .type-box.sentence-box { border-color: #ffe8cc; }
-    .type-title { font-weight: 700; font-size: 1rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-    .type-input-row { display: flex; gap: 8px; }
-    .type-input-row input { flex: 1; padding: 8px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.95rem; outline: none; }
+    .type-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
     
-    /* 버튼 */
-    .btn-add { padding: 8px 14px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; white-space: nowrap; font-size: 0.9rem; }
+    /* flex 입력줄 안 삐져나오게 설정 */
+    .type-input-row { display: flex; gap: 6px; width: 100%; }
+    .type-input-row input { flex: 1; min-width: 0; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; }
+    
+    /* 버튼 반응형 */
+    .btn-add { padding: 8px 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; white-space: nowrap; font-size: 0.85rem; flex-shrink: 0; }
     .btn-key { background: #339af0; }
     .btn-key:hover { background: #1c7ed6; }
     .btn-word { background: #51cf66; }
     .btn-word:hover { background: #37b24d; }
     .btn-sentence { background: #ff922b; }
     .btn-sentence:hover { background: #f76707; }
-    .btn-success { background: #28a745; color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1.05rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .btn-success { background: #28a745; color: white; width: 100%; padding: 12px; border-radius: 8px; border: none; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 0.2s; }
     .btn-success:hover { background: #218838; }
 
     /* 최고 타속 현황 요약 바 */
-    .best-summary-bar { display: flex; gap: 12px; background: #e7f5ff; border: 1px solid #a5d8ff; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; justify-content: space-around; }
-    .best-summary-item { font-size: 0.95rem; font-weight: 600; color: #1864ab; }
-    .best-summary-val { font-size: 1.1rem; color: #0b7285; font-weight: 800; }
+    .best-summary-bar { display: flex; gap: 8px; background: #e7f5ff; border: 1px solid #a5d8ff; padding: 10px 12px; border-radius: 8px; margin-bottom: 12px; flex-wrap: wrap; justify-content: space-around; }
+    .best-summary-item { font-size: 0.85rem; font-weight: 600; color: #1864ab; }
+    .best-summary-val { font-size: 1rem; color: #0b7285; font-weight: 800; }
 
-    /* 시도 목록 표 */
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-    th, td { border: 1px solid #e9ecef; padding: 10px; text-align: center; }
+    /* 시도 목록 표 반응형 지원 */
+    .table-responsive { overflow-x: auto; width: 100%; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 400px; }
+    th, td { border: 1px solid #e9ecef; padding: 8px 6px; text-align: center; }
     th { background: #f1f3f5; font-weight: 600; color: #495057; }
-    .badge-type { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; color: white; }
+    .badge-type { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; color: white; }
     .badge-key { background: #339af0; }
     .badge-word { background: #51cf66; }
     .badge-sentence { background: #ff922b; }
-    .badge-best { background: #fcc419; color: #343a40; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-left: 6px; font-weight: bold; }
+    .badge-best { background: #fcc419; color: #343a40; padding: 2px 5px; border-radius: 4px; font-size: 0.7rem; margin-left: 4px; font-weight: bold; }
 
     /* 그래프 용 캔버스 */
-    .chart-container { position: relative; height: 300px; width: 100%; margin-top: 15px; }
+    .chart-container { position: relative; height: 260px; width: 100%; margin-top: 10px; }
     canvas { width: 100% !important; height: 100% !important; }
 
-    .empty-msg { text-align: center; color: #868e96; padding: 26px 0; font-size: 0.95rem; }
+    .empty-msg { text-align: center; color: #868e96; padding: 20px 0; font-size: 0.9rem; }
+
+    /* 스마트폰 화면 화면 분이 */
+    @media (max-width: 480px) {
+      body { padding: 10px; }
+      .type-input-grid { grid-template-columns: 1fr; }
+      .session-info-bar { flex-direction: column; align-items: stretch; }
+      .session-group { justify-content: space-between; }
+    }
   </style>
 </head>
 <body>
@@ -182,7 +193,6 @@
         <div class="card">
           <div class="card-title">📝 타속 개별 기록하기</div>
           
-          <!-- 날짜 및 교시 선택 (교시 고정) -->
           <div class="session-info-bar">
             <div class="session-group">
               <label>📅 날짜:</label>
@@ -195,17 +205,15 @@
                   <option value="${p}" ${appData.lastSelectedPeriod === p ? 'selected' : ''}>${p}</option>
                 `).join('')}
               </select>
-              <span style="font-size:0.8rem; color:#868e96; margin-left:4px;">(교시 선택 시 자동 고정됨)</span>
             </div>
           </div>
 
-          <!-- 3개 개별 입력 박스 -->
           <div class="type-input-grid">
             
             <div class="type-box key-box">
               <div class="type-title" style="color:#1c7ed6;">⌨️ 자리 타수</div>
               <div class="type-input-row">
-                <input type="number" id="inputKey" placeholder="타수 입력" min="0">
+                <input type="number" id="inputKey" placeholder="타수" min="0">
                 <button class="btn-add btn-key" onclick="addSingleAttempt('key')">+ 자리 기록</button>
               </div>
             </div>
@@ -213,7 +221,7 @@
             <div class="type-box word-box">
               <div class="type-title" style="color:#2b8a3e;">📝 단어 타수</div>
               <div class="type-input-row">
-                <input type="number" id="inputWord" placeholder="타수 입력" min="0">
+                <input type="number" id="inputWord" placeholder="타수" min="0">
                 <button class="btn-add btn-word" onclick="addSingleAttempt('word')">+ 단어 기록</button>
               </div>
             </div>
@@ -221,7 +229,7 @@
             <div class="type-box sentence-box">
               <div class="type-title" style="color:#d9480f;">💬 문장 타수</div>
               <div class="type-input-row">
-                <input type="number" id="inputSentence" placeholder="타수 입력" min="0">
+                <input type="number" id="inputSentence" placeholder="타수" min="0">
                 <button class="btn-add btn-sentence" onclick="addSingleAttempt('sentence')">+ 문장 기록</button>
               </div>
             </div>
@@ -232,65 +240,67 @@
         <div class="card">
           <div class="card-title">
             <span>📋 현재 시도 목록</span>
-            <span style="font-size:0.85rem; font-weight:normal; color:#6c757d;">(연습 후 아래 버튼으로 확정하세요)</span>
+            <span style="font-size:0.8rem; font-weight:normal; color:#6c757d;">(연습 완료 후 아래 버튼 클릭)</span>
           </div>
 
           ${student.attempts.length > 0 ? `
             <div class="best-summary-bar">
-              <div class="best-summary-item">⌨️ 자리 최고: <span class="best-summary-val">${best.key}타</span></div>
-              <div class="best-summary-item">📝 단어 최고: <span class="best-summary-val">${best.word}타</span></div>
-              <div class="best-summary-item">💬 문장 최고: <span class="best-summary-val">${best.sentence}타</span></div>
+              <div class="best-summary-item">⌨️ 자리: <span class="best-summary-val">${best.key}타</span></div>
+              <div class="best-summary-item">📝 단어: <span class="best-summary-val">${best.word}타</span></div>
+              <div class="best-summary-item">💬 문장: <span class="best-summary-val">${best.sentence}타</span></div>
             </div>
 
-            <table>
-              <thead>
-                <tr>
-                  <th>회차</th>
-                  <th>날짜</th>
-                  <th>교시</th>
-                  <th>구분</th>
-                  <th>기록 타수</th>
-                  <th>삭제</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${student.attempts.map((att, idx) => {
-                  const isBest = (att.type === 'key' && att.speed === best.key && att.speed > 0) ||
-                                 (att.type === 'word' && att.speed === best.word && att.speed > 0) ||
-                                 (att.type === 'sentence' && att.speed === best.sentence && att.speed > 0);
-                  const typeLabel = att.type === 'key' ? '자리' : att.type === 'word' ? '단어' : '문장';
-                  const badgeClass = att.type === 'key' ? 'badge-key' : att.type === 'word' ? 'badge-word' : 'badge-sentence';
-                  
-                  return `
-                    <tr>
-                      <td>${idx + 1}회차</td>
-                      <td>${att.date}</td>
-                      <td>${att.period}</td>
-                      <td><span class="badge-type ${badgeClass}">${typeLabel}</span></td>
-                      <td style="font-weight:bold;">
-                        ${att.speed}타 ${isBest ? '<span class="badge-best">👑 최고</span>' : ''}
-                      </td>
-                      <td><button onclick="removeAttempt(${idx})" style="border:none; background:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button></td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>회차</th>
+                    <th>날짜</th>
+                    <th>교시</th>
+                    <th>구분</th>
+                    <th>기록</th>
+                    <th>삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${student.attempts.map((att, idx) => {
+                    const isBest = (att.type === 'key' && att.speed === best.key && att.speed > 0) ||
+                                   (att.type === 'word' && att.speed === best.word && att.speed > 0) ||
+                                   (att.type === 'sentence' && att.speed === best.sentence && att.speed > 0);
+                    const typeLabel = att.type === 'key' ? '자리' : att.type === 'word' ? '단어' : '문장';
+                    const badgeClass = att.type === 'key' ? 'badge-key' : att.type === 'word' ? 'badge-word' : 'badge-sentence';
+                    
+                    return `
+                      <tr>
+                        <td>${idx + 1}회</td>
+                        <td>${att.date}</td>
+                        <td>${att.period}</td>
+                        <td><span class="badge-type ${badgeClass}">${typeLabel}</span></td>
+                        <td style="font-weight:bold;">
+                          ${att.speed}타 ${isBest ? '<span class="badge-best">👑최고</span>' : ''}
+                        </td>
+                        <td><button onclick="removeAttempt(${idx})" style="border:none; background:none; color:#dc3545; cursor:pointer; font-weight:bold;">✕</button></td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
 
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 16px;">
               <button class="btn-success" onclick="confirmFinalRecord()">
-                ✅ 최종 확인 및 진전도 그래프 기록 저장
+                ✅ 최종 확인 및 진전도 그래프 저장
               </button>
             </div>
           ` : `
-            <div class="empty-msg">아직 기록된 시도가 없습니다. 위에서 타수를 입력해 보세요.</div>
+            <div class="empty-msg">아직 기록된 시도가 없습니다.</div>
           `}
         </div>
 
         <div class="card">
           <div class="card-title">📊 지난 최고 타수 진전도 비교</div>
           ${student.confirmedHistory.length === 0 ? `
-            <div class="empty-msg">'최종 확인' 버튼을 누르면 이전 기록들과 비교된 성장 그래프가 표시됩니다.</div>
+            <div class="empty-msg">'최종 확인' 버튼을 누르면 진전도 그래프가 표시됩니다.</div>
           ` : `
             <div class="chart-container">
               <canvas id="progressChart"></canvas>
@@ -330,7 +340,6 @@
         return;
       }
 
-      // 교시 및 날짜 고정 저장
       appData.lastSelectedDate = date;
       appData.lastSelectedPeriod = period;
 
@@ -338,7 +347,7 @@
         id: Date.now(),
         date,
         period,
-        type, // 'key', 'word', 'sentence'
+        type,
         speed
       });
 
@@ -401,7 +410,7 @@
 
       const width = rect.width;
       const height = rect.height;
-      const padding = 40;
+      const padding = 35;
 
       ctx.clearRect(0, 0, width, height);
       if (historyData.length === 0) return;
@@ -415,7 +424,7 @@
       ctx.strokeStyle = '#e9ecef';
       ctx.lineWidth = 1;
       ctx.fillStyle = '#868e96';
-      ctx.font = '12px sans-serif';
+      ctx.font = '11px sans-serif';
       ctx.textAlign = 'right';
 
       for (let i = 0; i <= 4; i++) {
@@ -425,7 +434,7 @@
         ctx.moveTo(padding, yPos);
         ctx.lineTo(width - padding, yPos);
         ctx.stroke();
-        ctx.fillText(yVal, padding - 8, yPos + 4);
+        ctx.fillText(yVal, padding - 6, yPos + 4);
       }
 
       const stepX = (width - padding * 2) / (historyData.length > 1 ? historyData.length - 1 : 1);
@@ -433,7 +442,7 @@
       const drawLine = (keyName, color) => {
         ctx.beginPath();
         ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2.5;
 
         historyData.forEach((d, i) => {
           const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
@@ -457,31 +466,31 @@
 
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(xPos, yPos, 5, 0, Math.PI * 2);
+          ctx.arc(xPos, yPos, 4.5, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.fillStyle = '#333';
-          ctx.font = 'bold 11px sans-serif';
+          ctx.font = 'bold 10px sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(val, xPos, yPos - 8);
+          ctx.fillText(val, xPos, yPos - 7);
         });
       };
 
-      drawLine('key', '#339af0');      // 자리 (파랑)
-      drawLine('word', '#51cf66');     // 단어 (초록)
-      drawLine('sentence', '#ff922b'); // 문장 (주황)
+      drawLine('key', '#339af0');      // 자리
+      drawLine('word', '#51cf66');     // 단어
+      drawLine('sentence', '#ff922b'); // 문장
 
       ctx.fillStyle = '#495057';
-      ctx.font = '11px sans-serif';
+      ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       historyData.forEach((d, i) => {
         const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
-        ctx.fillText(d.label, xPos, height - 12);
+        ctx.fillText(d.label, xPos, height - 10);
       });
 
-      const legendX = width - 200;
-      const legendY = 15;
-      ctx.font = '12px sans-serif';
+      const legendX = width - 180;
+      const legendY = 10;
+      ctx.font = '11px sans-serif';
 
       const items = [
         { name: '자리', color: '#339af0' },
@@ -491,10 +500,10 @@
 
       items.forEach((item, idx) => {
         ctx.fillStyle = item.color;
-        ctx.fillRect(legendX + idx * 60, legendY, 12, 12);
+        ctx.fillRect(legendX + idx * 55, legendY, 10, 10);
         ctx.fillStyle = '#333';
         ctx.textAlign = 'left';
-        ctx.fillText(item.name, legendX + idx * 60 + 16, legendY + 10);
+        ctx.fillText(item.name, legendX + idx * 55 + 14, legendY + 9);
       });
     }
 
