@@ -11,13 +11,12 @@
     h1 { font-size: 1.5rem; color: #212529; font-weight: 700; }
     p.subtitle { color: #6c757d; font-size: 0.85rem; margin-top: 6px; }
 
-    /* 학생 탭 */
+    /* 학생 탭 (깔끔하게 정돈) */
     .tab-container { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
-    .tab-btn { background: #e9ecef; border: none; padding: 8px 14px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; }
+    .tab-btn { background: #e9ecef; border: none; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; }
     .tab-btn.active { background: #4a90e2; color: #fff; }
     .tab-btn:hover:not(.active) { background: #dee2e6; }
     .add-student-btn { background: #28a745; color: white; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-    .delete-student-btn { background: #dc3545; color: white; border: none; padding: 2px 5px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; margin-left: 6px; }
 
     /* 카드 레이아웃 */
     .card { background: #ffffff; border-radius: 12px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #e9ecef; }
@@ -29,7 +28,7 @@
     .session-group label { font-size: 0.85rem; font-weight: 600; color: #495057; white-space: nowrap; }
     .session-group input, .session-group select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; background: white; }
 
-    /* 3가지 입력 카드 반응형 그리드 (안 삐져나오게 수정) */
+    /* 3가지 입력 카드 반응형 그리드 */
     .type-input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 10px; }
     .type-box { background: #fff; border: 2px solid #e9ecef; border-radius: 10px; padding: 12px; }
     .type-box.key-box { border-color: #d0ebff; }
@@ -37,11 +36,9 @@
     .type-box.sentence-box { border-color: #ffe8cc; }
     .type-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
     
-    /* flex 입력줄 안 삐져나오게 설정 */
     .type-input-row { display: flex; gap: 6px; width: 100%; }
     .type-input-row input { flex: 1; min-width: 0; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; outline: none; }
     
-    /* 버튼 반응형 */
     .btn-add { padding: 8px 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; color: white; white-space: nowrap; font-size: 0.85rem; flex-shrink: 0; }
     .btn-key { background: #339af0; }
     .btn-key:hover { background: #1c7ed6; }
@@ -57,7 +54,7 @@
     .best-summary-item { font-size: 0.85rem; font-weight: 600; color: #1864ab; }
     .best-summary-val { font-size: 1rem; color: #0b7285; font-weight: 800; }
 
-    /* 시도 목록 표 반응형 지원 */
+    /* 시도 목록 표 */
     .table-responsive { overflow-x: auto; width: 100%; margin-top: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 400px; }
     th, td { border: 1px solid #e9ecef; padding: 8px 6px; text-align: center; }
@@ -74,7 +71,11 @@
 
     .empty-msg { text-align: center; color: #868e96; padding: 20px 0; font-size: 0.9rem; }
 
-    /* 스마트폰 화면 화면 분이 */
+    /* 하단 전용 삭제 버튼 스타일 */
+    .delete-container { display: flex; justify-content: flex-end; margin-top: 24px; margin-bottom: 12px; }
+    .btn-delete-student { background: #fff; border: 1px solid #ffc9c9; color: #e03131; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; }
+    .btn-delete-student:hover { background: #fff5f5; border-color: #ffa8a8; color: #c92a2a; }
+
     @media (max-width: 480px) {
       body { padding: 10px; }
       .type-input-grid { grid-template-columns: 1fr; }
@@ -130,12 +131,8 @@
       appData.students.forEach(student => {
         const btn = document.createElement('button');
         btn.className = `tab-btn ${student.id === appData.activeStudentId ? 'active' : ''}`;
-        btn.innerHTML = `
-          ${escapeHtml(student.name)}
-          ${appData.students.length > 1 ? `<span class="delete-student-btn" onclick="deleteStudent(event, '${student.id}')">✕</span>` : ''}
-        `;
-        btn.onclick = (e) => {
-          if (e.target.classList.contains('delete-student-btn')) return;
+        btn.innerText = student.name;
+        btn.onclick = () => {
           appData.activeStudentId = student.id;
           saveData();
           renderTabs();
@@ -167,15 +164,21 @@
       renderContent();
     }
 
-    function deleteStudent(event, id) {
-      event.stopPropagation();
-      if (!confirm('정말 이 학생을 삭제하시겠습니까?')) return;
-      appData.students = appData.students.filter(s => s.id !== id);
-      if (appData.activeStudentId === id) {
-        appData.activeStudentId = appData.students[0]?.id || '';
+    function deleteCurrentStudent() {
+      const student = appData.students.find(s => s.id === appData.activeStudentId);
+      if (!student) return;
+
+      if (appData.students.length <= 1) {
+        alert('최소 1명의 학생은 목록에 있어야 합니다.');
+        return;
       }
-      saveData();
-      init();
+
+      if (confirm(`'${student.name}' 학생과 저장된 모든 타속 데이터가 삭제됩니다. 정말 삭제하시겠습니까?`)) {
+        appData.students = appData.students.filter(s => s.id !== student.id);
+        appData.activeStudentId = appData.students[0].id;
+        saveData();
+        init();
+      }
     }
 
     function renderContent() {
@@ -306,6 +309,13 @@
               <canvas id="progressChart"></canvas>
             </div>
           `}
+        </div>
+
+        <!-- 맨 밑 삭제하기 버튼 영역 -->
+        <div class="delete-container">
+          <button class="btn-delete-student" onclick="deleteCurrentStudent()">
+            🗑️ 현재 학생('${escapeHtml(student.name)}') 삭제하기
+          </button>
         </div>
       `;
 
