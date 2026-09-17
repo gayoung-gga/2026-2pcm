@@ -95,6 +95,14 @@
     .prog-tadak { background-color: #fef3c7; color: #d97706; }
     .prog-hancom { background-color: #e0e7ff; color: #4338ca; }
 
+    /* 🏆 최고 배지 스타일 */
+    .badge-best { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; background: #fff3bf; color: #f59f00; border: 1px solid #ffe066; margin-left: 4px; }
+
+    /* 그래프 범례 스타일 */
+    .chart-legend { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 4px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
     .btn-action { border: none; background: none; cursor: pointer; font-size: 0.9rem; padding: 2px 4px; }
     .btn-edit-info { background: #e7f5ff; border: 1px solid #74c0fc; color: #1c7ed6; font-size: 0.8rem; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; margin-left: 8px; }
     .btn-edit-info:hover { background: #d0ebff; }
@@ -504,7 +512,6 @@
       }).join('');
     }
 
-    /* ★ 학생 탭 렌더링 & 비밀번호 보호 로직 */
     function renderTabs() {
       const container = document.getElementById('tabContainer');
       container.innerHTML = '';
@@ -517,10 +524,9 @@
         btn.onclick = () => {
           if (student.id === appData.activeStudentId) return;
 
-          // 비밀번호가 설정된 학생이면 비밀번호 입력 확인
           if (student.password && student.password.trim() !== '') {
             const inputPw = prompt(`🔑 '${student.name}' 학생의 비밀번호를 입력하세요:`);
-            if (inputPw === null) return; // 취소 누른 경우
+            if (inputPw === null) return;
             if (inputPw.trim() !== student.password.trim()) {
               alert('❌ 비밀번호가 올바르지 않습니다.');
               return;
@@ -567,7 +573,6 @@
       saveData();
     }
 
-    /* ★ 이미 등록된 현재 학생의 반, 이름, 주 사용 프로그램, 비밀번호 변경 */
     function editStudentInfo() {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
       if (!student) return;
@@ -611,6 +616,30 @@
       }
     }
 
+    /* ★ 영역별 최고 시도 인덱스 구하기 (🏆 최고 태그 표시용) */
+    function getBestAttemptIndexes(attempts) {
+      let maxKeySpeed = -1, maxKeySpeedIdx = -1;
+      let minKeyTime = Infinity, minKeyTimeIdx = -1;
+      let maxWord = -1, maxWordIdx = -1;
+      let maxSentence = -1, maxSentenceIdx = -1;
+
+      (attempts || []).forEach((a, idx) => {
+        if (a.type === 'key') {
+          if (a.unit === '초') {
+            if (a.speed < minKeyTime && a.speed > 0) { minKeyTime = a.speed; minKeyTimeIdx = idx; }
+          } else {
+            if (a.speed > maxKeySpeed) { maxKeySpeed = a.speed; maxKeySpeedIdx = idx; }
+          }
+        } else if (a.type === 'word') {
+          if (a.speed > maxWord) { maxWord = a.speed; maxWordIdx = idx; }
+        } else if (a.type === 'sentence') {
+          if (a.speed > maxSentence) { maxSentence = a.speed; maxSentenceIdx = idx; }
+        }
+      });
+
+      return { maxKeySpeedIdx, minKeyTimeIdx, maxWordIdx, maxSentenceIdx };
+    }
+
     function renderContent() {
       const main = document.getElementById('mainContent');
       const student = appData.students.find(s => s.id === appData.activeStudentId);
@@ -621,6 +650,7 @@
       }
 
       const best = getBestSpeeds(student.attempts || []);
+      const bestIndexes = getBestAttemptIndexes(student.attempts || []);
       const currentProg = student.defaultProgram || '타닥타닥';
 
       main.innerHTML = `
@@ -701,9 +731,9 @@
 
           ${(student.attempts && student.attempts.length > 0) ? `
             <div class="best-summary-bar">
-              <div class="best-summary-item">⌨️ 자리: <span class="best-summary-val">${best.keyDisplay}</span></div>
-              <div class="best-summary-item">📝 단어: <span class="best-summary-val">${best.word > 0 ? best.word + '타' : '-'}</span></div>
-              <div class="best-summary-item">💬 문장: <span class="best-summary-val">${best.sentence > 0 ? best.sentence + '타' : '-'}</span></div>
+              <div class="best-summary-item">⌨️ 자리 최고: <span class="best-summary-val">${best.keyDisplay}</span></div>
+              <div class="best-summary-item">📝 단어 최고: <span class="best-summary-val">${best.word > 0 ? best.word + '타' : '-'}</span></div>
+              <div class="best-summary-item">💬 문장 최고: <span class="best-summary-val">${best.sentence > 0 ? best.sentence + '타' : '-'}</span></div>
             </div>
 
             <div class="table-responsive">
@@ -725,13 +755,18 @@
                     const progClass = att.program === '타닥타닥' ? 'prog-tadak' : 'prog-hancom';
                     const unitStr = att.unit || '타';
 
+                    const isBest = (idx === bestIndexes.maxKeySpeedIdx || idx === bestIndexes.minKeyTimeIdx || idx === bestIndexes.maxWordIdx || idx === bestIndexes.maxSentenceIdx);
+
                     return `
                       <tr>
                         <td>${idx + 1}회</td>
                         <td>${att.date} (${att.period})</td>
                         <td><span class="badge-prog ${progClass}">${att.program || '타닥타닥'}</span></td>
                         <td><span class="badge-type ${badgeClass}">${typeLabel}</span></td>
-                        <td style="font-weight:bold;">${att.speed}${unitStr}</td>
+                        <td style="font-weight:bold;">
+                          ${att.speed}${unitStr}
+                          ${isBest ? '<span class="badge-best">🏆 최고</span>' : ''}
+                        </td>
                         <td>
                           <button class="btn-action" onclick="editAttempt(${idx})" title="기록 수정">✏️</button>
                           <button class="btn-action" onclick="removeAttempt(${idx})" title="기록 삭제" style="color:#dc3545; font-weight:bold;">✕</button>
@@ -753,12 +788,18 @@
           `}
         </div>
 
-        <!-- 지난 최고 타수 그래프 -->
+        <!-- 지난 최고 타수 및 시간 진전도 그래프 -->
         <div class="card">
-          <div class="card-title">📊 지난 최고 타수 진전도 비교</div>
+          <div class="card-title">📊 지난 최고 타수 및 시간 진전도 비교</div>
           ${(!student.confirmedHistory || student.confirmedHistory.length === 0) ? `
             <div class="empty-msg">'오늘 연습 완료' 버튼을 누르면 개인 진전도 그래프가 저장됩니다.</div>
           ` : `
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-color" style="background:#339af0;"></span> 자리(타수)</span>
+              <span class="legend-item"><span class="legend-color" style="background:#845ef7;"></span> 자리(시간/초)</span>
+              <span class="legend-item"><span class="legend-color" style="background:#51cf66;"></span> 단어(타수)</span>
+              <span class="legend-item"><span class="legend-color" style="background:#ff922b;"></span> 문장(타수)</span>
+            </div>
             <div class="chart-container">
               <canvas id="progressChart"></canvas>
             </div>
@@ -982,6 +1023,7 @@
       alert('오늘 연습 결과가 저장되었습니다!');
     }
 
+    /* ★ 그래프 그리기 (자리 시간/초 그래프 연동 보완) */
     function drawChart(historyData) {
       const canvas = document.getElementById('progressChart');
       if (!canvas) return;
@@ -996,7 +1038,9 @@
       ctx.clearRect(0, 0, width, height);
 
       let maxVal = 100;
-      historyData.forEach(d => { maxVal = Math.max(maxVal, d.key_speed||d.key||0, d.word||0, d.sentence||0); });
+      historyData.forEach(d => {
+        maxVal = Math.max(maxVal, d.key_speed || d.key || 0, d.key_time || 0, d.word || 0, d.sentence || 0);
+      });
       maxVal = Math.ceil(maxVal / 50) * 50 + 50;
 
       ctx.strokeStyle = '#e9ecef';
@@ -1017,7 +1061,9 @@
 
       const stepX = (width - padding * 2) / (historyData.length > 1 ? historyData.length - 1 : 1);
 
-      const drawLine = (keyName, color) => {
+      const drawLine = (keyName, color, unitSuffix = '타') => {
+        let hasData = false;
+        
         ctx.beginPath();
         ctx.strokeStyle = color;
         ctx.lineWidth = 2.5;
@@ -1025,34 +1071,37 @@
         historyData.forEach((d, i) => {
           const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
           const val = d[keyName] || (keyName === 'key_speed' ? d.key : 0) || 0;
+          if (val > 0) hasData = true;
           const yPos = height - padding - ((height - padding * 2) * (val / maxVal));
           if (i === 0) ctx.moveTo(xPos, yPos);
           else ctx.lineTo(xPos, yPos);
         });
-        ctx.stroke();
+        if (hasData) ctx.stroke();
 
         historyData.forEach((d, i) => {
           const xPos = historyData.length === 1 ? width / 2 : padding + i * stepX;
           const val = d[keyName] || (keyName === 'key_speed' ? d.key : 0) || 0;
-          const yPos = height - padding - ((height - padding * 2) * (val / maxVal));
-
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(xPos, yPos, 4.5, 0, Math.PI * 2);
-          ctx.fill();
-
+          
           if (val > 0) {
+            const yPos = height - padding - ((height - padding * 2) * (val / maxVal));
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(xPos, yPos, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.fillStyle = '#333';
             ctx.font = 'bold 10px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(val, xPos, yPos - 7);
+            ctx.fillText(val + unitSuffix, xPos, yPos - 7);
           }
         });
       };
 
-      drawLine('key_speed', '#339af0');
-      drawLine('word', '#51cf66');
-      drawLine('sentence', '#ff922b');
+      drawLine('key_speed', '#339af0', '타');
+      drawLine('key_time', '#845ef7', '초');
+      drawLine('word', '#51cf66', '타');
+      drawLine('sentence', '#ff922b', '타');
 
       ctx.fillStyle = '#495057';
       ctx.font = '10px sans-serif';
