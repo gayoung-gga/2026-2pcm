@@ -98,6 +98,9 @@
     .btn-action { border: none; background: none; cursor: pointer; font-size: 0.9rem; padding: 2px 4px; }
     .btn-edit-info { background: #e7f5ff; border: 1px solid #74c0fc; color: #1c7ed6; font-size: 0.8rem; font-weight: bold; padding: 5px 10px; border-radius: 6px; cursor: pointer; margin-left: 8px; }
     .btn-edit-info:hover { background: #d0ebff; }
+    
+    .btn-csv-download { background: #107c41; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .btn-csv-download:hover { background: #0b5c30; }
 
     .chart-container { position: relative; height: 260px; width: 100%; margin-top: 10px; }
     canvas { width: 100% !important; height: 100% !important; }
@@ -142,9 +145,12 @@
     </div>
   </div>
 
-  <!-- 👥 전체 타수 현황판 -->
+  <!-- 👥 전체 타수 현황판 & CSV 다운로드 -->
   <div class="card">
-    <div class="card-title">👥 학생별 현황판</div>
+    <div class="card-title">
+      <span>👥 학생별 현황판</span>
+      <button class="btn-csv-download" onclick="exportToCSV()">📥 엑셀(CSV) 다운로드</button>
+    </div>
     <div class="table-responsive">
       <table id="classOverviewTable">
         <thead>
@@ -263,6 +269,57 @@
       renderClassOverview();
       renderTabs();
       renderContent();
+    }
+
+    /* ★ 엑셀(CSV) 파일 다운로드 기능 */
+    function exportToCSV() {
+      if (!appData.students || appData.students.length === 0) {
+        alert('다운로드할 학생 데이터가 없습니다.');
+        return;
+      }
+
+      let csvContent = "\uFEFF"; // UTF-8 BOM (엑셀 한글 깨짐 방지)
+      csvContent += "소속 반,학생 이름,주 사용 프로그램,자리 최고(타수),자리 최고(초),단어 최고(타수),문장 최고(타수),저장 회차 수\n";
+
+      appData.students.forEach(s => {
+        let maxKeySpeed = 0, minKeyTime = Infinity;
+        let maxWord = 0, maxSentence = 0;
+
+        (s.attempts || []).forEach(a => {
+          if (a.type === 'key') {
+            if (a.unit === '초') minKeyTime = Math.min(minKeyTime, a.speed);
+            else maxKeySpeed = Math.max(maxKeySpeed, a.speed);
+          }
+          if (a.type === 'word') maxWord = Math.max(maxWord, a.speed);
+          if (a.type === 'sentence') maxSentence = Math.max(maxSentence, a.speed);
+        });
+
+        (s.confirmedHistory || []).forEach(h => {
+          const kSpeed = h.key_speed || h.key || 0;
+          if (kSpeed) maxKeySpeed = Math.max(maxKeySpeed, kSpeed);
+          if (h.key_time) minKeyTime = Math.min(minKeyTime, h.key_time);
+          if (h.word) maxWord = Math.max(maxWord, h.word);
+          if (h.sentence) maxSentence = Math.max(maxSentence, h.sentence);
+        });
+
+        const kSpeedStr = maxKeySpeed > 0 ? maxKeySpeed + '타' : '-';
+        const kTimeStr = minKeyTime !== Infinity ? minKeyTime + '초' : '-';
+        const wordStr = maxWord > 0 ? maxWord + '타' : '-';
+        const sentenceStr = maxSentence > 0 ? maxSentence + '타' : '-';
+        const historyCount = (s.confirmedHistory || []).length;
+
+        csvContent += `"${s.className || '미지정'}","${s.name}","${s.defaultProgram || '타닥타닥'}","${kSpeedStr}","${kTimeStr}","${wordStr}","${sentenceStr}","${historyCount}회"\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      const today = new Date().toISOString().split('T')[0];
+      link.setAttribute('download', `학생_타수_최고기록_${today}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // 🏆 명예의 전당
@@ -458,7 +515,6 @@
       saveData();
     }
 
-    /* ★ [수정 기능] 이미 등록된 학생의 반/이름/주 사용 프로그램 수정 */
     function editStudentInfo() {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
       if (!student) return;
