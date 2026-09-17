@@ -27,7 +27,7 @@
 
     /* 학생 탭 */
     .tab-container { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid #dee2e6; padding-bottom: 8px; }
-    .tab-btn { background: #e9ecef; border: none; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; }
+    .tab-btn { background: #e9ecef; border: none; padding: 8px 16px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; color: #495057; font-size: 0.9rem; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
     .tab-btn.active { background: #4a90e2; color: #fff; }
     .tab-btn:hover:not(.active) { background: #dee2e6; }
     .add-student-btn { background: #28a745; color: white; border: none; padding: 7px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
@@ -206,7 +206,7 @@
 
     let appData = {
       students: [
-        { id: 'std_1', name: '김학생', className: '백두반', defaultProgram: '타닥타닥', attempts: [], confirmedHistory: [] }
+        { id: 'std_1', name: '김학생', className: '백두반', defaultProgram: '타닥타닥', password: '', attempts: [], confirmedHistory: [] }
       ],
       activeStudentId: 'std_1',
       lastSelectedDate: new Date().toISOString().split('T')[0],
@@ -259,7 +259,6 @@
       if (local) { appData = JSON.parse(local); }
     }
 
-    /* ★ [핵심 정렬 로직] 지난 기록을 날짜순 및 교시순으로 자동 오름차순 정렬 */
     function sortHistoryList(history) {
       if (!history || !Array.isArray(history)) return [];
       const periodMap = { '1교시': 1, '2교시': 2, '3교시': 3, '4교시': 4, '5교시': 5, '6교시': 6, '방과후': 7 };
@@ -495,7 +494,7 @@
         return `
           <tr>
             <td><span class="badge-class">${s.className || '미지정'}</span></td>
-            <td style="font-weight:bold; color:#343a40;">${escapeHtml(s.name)}</td>
+            <td style="font-weight:bold; color:#343a40;">${escapeHtml(s.name)} ${s.password ? '🔒' : ''}</td>
             <td><span style="color:#1c7ed6; font-weight:bold;">${keyDisplay}</span></td>
             <td><span style="color:#2b8a3e; font-weight:bold;">${maxWord > 0 ? maxWord + '타' : '-'}</span></td>
             <td><span style="color:#d9480f; font-weight:bold;">${maxSentence > 0 ? maxSentence + '타' : '-'}</span></td>
@@ -505,6 +504,7 @@
       }).join('');
     }
 
+    /* ★ 학생 탭 렌더링 & 비밀번호 보호 로직 */
     function renderTabs() {
       const container = document.getElementById('tabContainer');
       container.innerHTML = '';
@@ -512,8 +512,21 @@
       appData.students.forEach(student => {
         const btn = document.createElement('button');
         btn.className = `tab-btn ${student.id === appData.activeStudentId ? 'active' : ''}`;
-        btn.innerText = `[${student.className || '반미지정'}] ${student.name}`;
+        btn.innerHTML = `[${student.className || '반미지정'}] ${escapeHtml(student.name)} ${student.password ? '🔒' : ''}`;
+        
         btn.onclick = () => {
+          if (student.id === appData.activeStudentId) return;
+
+          // 비밀번호가 설정된 학생이면 비밀번호 입력 확인
+          if (student.password && student.password.trim() !== '') {
+            const inputPw = prompt(`🔑 '${student.name}' 학생의 비밀번호를 입력하세요:`);
+            if (inputPw === null) return; // 취소 누른 경우
+            if (inputPw.trim() !== student.password.trim()) {
+              alert('❌ 비밀번호가 올바르지 않습니다.');
+              return;
+            }
+          }
+
           appData.activeStudentId = student.id;
           renderTabs();
           renderContent();
@@ -538,11 +551,14 @@
       const progChoice = prompt(`'${name.trim()}' 학생의 주 사용 프로그램을 선택하세요:\n1. 타닥타닥\n2. 한컴 타자연습`, className.includes('태백') ? '2' : '1');
       const defaultProgram = progChoice === '2' ? '한컴 타자연습' : '타닥타닥';
 
+      const password = prompt(`'${name.trim()}' 학생의 비밀번호(PIN)를 설정하세요 (없으면 취소 또는 빈칸):`, '');
+
       const newStudent = {
         id: 'std_' + Date.now(),
         name: name.trim(),
         className: className.trim(),
         defaultProgram: defaultProgram,
+        password: password ? password.trim() : '',
         attempts: [],
         confirmedHistory: []
       };
@@ -551,6 +567,7 @@
       saveData();
     }
 
+    /* ★ 이미 등록된 현재 학생의 반, 이름, 주 사용 프로그램, 비밀번호 변경 */
     function editStudentInfo() {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
       if (!student) return;
@@ -566,10 +583,16 @@
       const newProgChoice = prompt(`'${newName.trim()}' 학생의 주 사용 프로그램을 선택하세요:\n1. 타닥타닥\n2. 한컴 타자연습`, currentProg === '한컴 타자연습' ? '2' : '1');
       if (newProgChoice === null) return;
 
+      const currentPw = student.password || '';
+      const newPw = prompt(`'${newName.trim()}' 학생의 비밀번호(PIN)를 설정/수정하세요 (비밀번호를 없애려면 빈칸):`, currentPw);
+      if (newPw === null) return;
+
       student.className = newClass.trim();
       student.name = newName.trim();
       student.defaultProgram = newProgChoice === '2' ? '한컴 타자연습' : '타닥타닥';
+      student.password = newPw.trim();
       saveData();
+      alert('학생 정보 및 비밀번호 설정이 성공적으로 저장되었습니다!');
     }
 
     function deleteCurrentStudent() {
@@ -607,7 +630,8 @@
               <span>📝 '${escapeHtml(student.name)}' 학생 기록하기</span>
               <span class="badge-class">${student.className || '반미지정'}</span>
               <span class="badge-prog ${currentProg === '타닥타닥' ? 'prog-tadak' : 'prog-hancom'}">${currentProg}</span>
-              <button class="btn-edit-info" onclick="editStudentInfo()" title="소속 반, 이름, 프로그램 수정">✏️ 반/이름/프로그램 변경</button>
+              ${student.password ? '<span style="font-size:0.8rem; background:#fff3bf; color:#f59f00; padding:2px 6px; border-radius:4px; font-weight:bold;">🔒 비번 설정됨</span>' : ''}
+              <button class="btn-edit-info" onclick="editStudentInfo()" title="소속 반, 이름, 프로그램, 비밀번호 수정">✏️ 반/이름/프로그램/비번 변경</button>
             </div>
           </div>
           
