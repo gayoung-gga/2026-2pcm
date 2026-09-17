@@ -124,7 +124,7 @@
     </div>
   </header>
 
-  <!-- 🏆 명예의 전당 (한라반 추가 & 6위 확장 반영) -->
+  <!-- 🏆 명예의 전당 -->
   <div class="card">
     <div class="card-title">
       <span>🏆 명예의 전당</span>
@@ -265,7 +265,7 @@
       renderContent();
     }
 
-    // 🏆 명예의 전당 (구버전 자리 기록 호환 & 단어/문장 6위 확장)
+    // 🏆 명예의 전당
     function renderLeaderboard() {
       const grid = document.getElementById('fameGrid');
       let filteredStudents = appData.students || [];
@@ -303,7 +303,7 @@
           }).forEach(a => checkVal(a.speed, a.unit));
 
           (s.confirmedHistory || []).forEach(h => {
-            if (type === 'key_speed') checkVal(h.key_speed || h.key, '타'); // 구버전 h.key 호환
+            if (type === 'key_speed') checkVal(h.key_speed || h.key, '타');
             if (type === 'key_time') checkVal(h.key_time, '초');
             if (type === 'word') checkVal(h.word, '타');
             if (type === 'sentence') checkVal(h.sentence, '타');
@@ -323,8 +323,8 @@
 
       const topKeySpeed = getTopStudents('key_speed', 3);
       const topKeyTime = getTopStudents('key_time', 3);
-      const topWord = getTopStudents('word', 6); // ★ 6위까지
-      const topSentence = getTopStudents('sentence', 6); // ★ 6위까지
+      const topWord = getTopStudents('word', 6);
+      const topSentence = getTopStudents('sentence', 6);
 
       const renderRankList = (list) => {
         if (list.length === 0) return '<div class="empty-msg">기록 없음</div>';
@@ -356,7 +356,7 @@
       `;
     }
 
-    // 👥 전체 타수 현황판 (구버전 자리 데이터 복구 반영)
+    // 👥 전체 타수 현황판
     function renderClassOverview() {
       const tbody = document.getElementById('classOverviewBody');
       let filteredStudents = appData.students || [];
@@ -384,7 +384,7 @@
         });
 
         (s.confirmedHistory || []).forEach(h => {
-          const kSpeed = h.key_speed || h.key || 0; // 구버전 h.key 완벽 복구!
+          const kSpeed = h.key_speed || h.key || 0;
           if (kSpeed) maxKeySpeed = Math.max(maxKeySpeed, kSpeed);
           if (h.key_time) minKeyTime = Math.min(minKeyTime, h.key_time);
           if (h.word) maxWord = Math.max(maxWord, h.word);
@@ -396,7 +396,8 @@
         else if (maxKeySpeed > 0) keyDisplay = `${maxKeySpeed}타`;
         else if (minKeyTime !== Infinity) keyDisplay = `${minKeyTime}초`;
 
-        const progClass = (s.defaultProgram || '타닥타닥') === '타닥타닥' ? 'prog-tadak' : 'prog-hancom';
+        const mainProg = s.defaultProgram || '타닥타닥';
+        const progClass = mainProg === '타닥타닥' ? 'prog-tadak' : 'prog-hancom';
 
         return `
           <tr>
@@ -405,7 +406,7 @@
             <td><span style="color:#1c7ed6; font-weight:bold;">${keyDisplay}</span></td>
             <td><span style="color:#2b8a3e; font-weight:bold;">${maxWord > 0 ? maxWord + '타' : '-'}</span></td>
             <td><span style="color:#d9480f; font-weight:bold;">${maxSentence > 0 ? maxSentence + '타' : '-'}</span></td>
-            <td><span class="badge-prog ${progClass}">${s.defaultProgram || '타닥타닥'}</span></td>
+            <td><span class="badge-prog ${progClass}">${mainProg}</span></td>
           </tr>
         `;
       }).join('');
@@ -435,13 +436,14 @@
     }
 
     function addStudent() {
-      const className = prompt('소속 반을 입력하거나 선택하세요 (예: 백두반 / 태백반 / 한라반):', '한라반');
+      const className = prompt('소속 반을 입력하거나 선택하세요 (예: 백두반 / 태백반 / 한라반):', '백두반');
       if (!className) return;
 
       const name = prompt('학생의 이름을 입력해주세요:');
       if (!name || !name.trim()) return;
 
-      const defaultProgram = (className.includes('태백') || className.includes('한컴')) ? '한컴 타자연습' : '타닥타닥';
+      const progChoice = prompt(`'${name.trim()}' 학생의 주 사용 프로그램을 선택하세요:\n1. 타닥타닥\n2. 한컴 타자연습`, className.includes('태백') ? '2' : '1');
+      const defaultProgram = progChoice === '2' ? '한컴 타자연습' : '타닥타닥';
 
       const newStudent = {
         id: 'std_' + Date.now(),
@@ -456,7 +458,7 @@
       saveData();
     }
 
-    /* ★ [수정 기능] 이미 등록된 학생의 반 및 이름 수정 */
+    /* ★ [수정 기능] 이미 등록된 학생의 반/이름/주 사용 프로그램 수정 */
     function editStudentInfo() {
       const student = appData.students.find(s => s.id === appData.activeStudentId);
       if (!student) return;
@@ -468,8 +470,13 @@
       const newName = prompt(`'${student.name}' 학생의 이름을 수정하세요:`, student.name);
       if (newName === null || !newName.trim()) return;
 
+      const currentProg = student.defaultProgram || '타닥타닥';
+      const newProgChoice = prompt(`'${newName.trim()}' 학생의 주 사용 프로그램을 선택하세요:\n1. 타닥타닥\n2. 한컴 타자연습`, currentProg === '한컴 타자연습' ? '2' : '1');
+      if (newProgChoice === null) return;
+
       student.className = newClass.trim();
       student.name = newName.trim();
+      student.defaultProgram = newProgChoice === '2' ? '한컴 타자연습' : '타닥타닥';
       saveData();
     }
 
@@ -499,6 +506,7 @@
       }
 
       const best = getBestSpeeds(student.attempts || []);
+      const currentProg = student.defaultProgram || '타닥타닥';
 
       main.innerHTML = `
         <div class="card">
@@ -506,7 +514,8 @@
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span>📝 '${escapeHtml(student.name)}' 학생 기록하기</span>
               <span class="badge-class">${student.className || '반미지정'}</span>
-              <button class="btn-edit-info" onclick="editStudentInfo()" title="소속 반 및 이름 수정">✏️ 소속 반 및 이름 변경</button>
+              <span class="badge-prog ${currentProg === '타닥타닥' ? 'prog-tadak' : 'prog-hancom'}">${currentProg}</span>
+              <button class="btn-edit-info" onclick="editStudentInfo()" title="소속 반, 이름, 프로그램 수정">✏️ 반/이름/프로그램 변경</button>
             </div>
           </div>
           
@@ -524,10 +533,10 @@
               </select>
             </div>
             <div class="session-group">
-              <label>💻 프로그램:</label>
+              <label>💻 입력 프로그램:</label>
               <select id="inputProgram" onchange="updateSessionInfo()">
-                <option value="타닥타닥" ${(student.defaultProgram === '타닥타닥') ? 'selected' : ''}>타닥타닥</option>
-                <option value="한컴 타자연습" ${(student.defaultProgram === '한컴 타자연습') ? 'selected' : ''}>한컴 타자연습</option>
+                <option value="타닥타닥" ${currentProg === '타닥타닥' ? 'selected' : ''}>타닥타닥</option>
+                <option value="한컴 타자연습" ${currentProg === '한컴 타자연습' ? 'selected' : ''}>한컴 타자연습</option>
               </select>
             </div>
           </div>
@@ -785,7 +794,7 @@
       }
 
       h[keyName] = num > 0 ? num : null;
-      if (keyName === 'key_speed' && h.key) delete h.key; // 레거시 필드 정리
+      if (keyName === 'key_speed' && h.key) delete h.key;
       saveData();
     }
 
