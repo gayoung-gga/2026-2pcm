@@ -221,6 +221,7 @@
         badge.className = 'status-badge status-offline';
         badge.innerText = '⚠️ 파이어베이스 키 설정이 필요합니다 (로컬 모드 작동 중)';
         loadLocalData();
+        sortAllHistory();
         renderAll();
         return;
       }
@@ -235,6 +236,7 @@
           if (!appData.students.find(s => s.id === appData.activeStudentId)) {
             appData.activeStudentId = appData.students[0].id;
           }
+          sortAllHistory();
         }
         renderAll();
       }, (error) => {
@@ -244,6 +246,7 @@
     }
 
     function saveData() {
+      sortAllHistory();
       if (isFirebaseReady) {
         db.ref('typing_app_data').set({ students: appData.students });
       } else {
@@ -254,6 +257,39 @@
     function loadLocalData() {
       const local = localStorage.getItem('typing_app_data');
       if (local) { appData = JSON.parse(local); }
+    }
+
+    /* ★ [핵심 정렬 로직] 지난 기록을 날짜순 및 교시순으로 자동 오름차순 정렬 */
+    function sortHistoryList(history) {
+      if (!history || !Array.isArray(history)) return [];
+      const periodMap = { '1교시': 1, '2교시': 2, '3교시': 3, '4교시': 4, '5교시': 5, '6교시': 6, '방과후': 7 };
+
+      return history.sort((a, b) => {
+        let dateA = a.date || (a.label ? a.label.split(' ')[0] : '');
+        let dateB = b.date || (b.label ? b.label.split(' ')[0] : '');
+
+        if (dateA !== dateB) {
+          return dateA.localeCompare(dateB);
+        }
+
+        let periodA = a.period || (a.label ? (a.label.match(/\((.*?)\)/) || [])[1] : '') || '';
+        let periodB = b.period || (b.label ? (b.label.match(/\((.*?)\)/) || [])[1] : '') || '';
+
+        const orderA = periodMap[periodA] || 99;
+        const orderB = periodMap[periodB] || 99;
+
+        return orderA - orderB;
+      });
+    }
+
+    function sortAllHistory() {
+      if (appData.students) {
+        appData.students.forEach(s => {
+          if (s.confirmedHistory) {
+            s.confirmedHistory = sortHistoryList(s.confirmedHistory);
+          }
+        });
+      }
     }
 
     function setOverviewFilter(filter, btnElem) {
@@ -271,14 +307,14 @@
       renderContent();
     }
 
-    /* ★ 엑셀(CSV) 파일 다운로드 기능 */
+    /* 엑셀(CSV) 다운로드 */
     function exportToCSV() {
       if (!appData.students || appData.students.length === 0) {
         alert('다운로드할 학생 데이터가 없습니다.');
         return;
       }
 
-      let csvContent = "\uFEFF"; // UTF-8 BOM (엑셀 한글 깨짐 방지)
+      let csvContent = "\uFEFF";
       csvContent += "소속 반,학생 이름,주 사용 프로그램,자리 최고(타수),자리 최고(초),단어 최고(타수),문장 최고(타수),저장 회차 수\n";
 
       appData.students.forEach(s => {
@@ -709,7 +745,7 @@
         ${(student.confirmedHistory && student.confirmedHistory.length > 0) ? `
           <div class="card">
             <div class="card-title">
-              <span>🗂️ 지난 저장 기록 관리 (수정 / 삭제)</span>
+              <span>🗂️ 지난 저장 기록 관리 (날짜순 정렬됨)</span>
             </div>
             <div class="table-responsive">
               <table>
@@ -908,6 +944,8 @@
 
       if (!student.confirmedHistory) student.confirmedHistory = [];
       student.confirmedHistory.push({
+        date: lastAttempt.date,
+        period: lastAttempt.period,
         label: `${lastAttempt.date} (${lastAttempt.period})`,
         key_speed: maxKeySpeed > 0 ? maxKeySpeed : null,
         key_time: minKeyTime !== Infinity ? minKeyTime : null,
